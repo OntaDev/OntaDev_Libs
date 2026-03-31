@@ -1,39 +1,40 @@
 // PPFSS_Libs Plugin
-// Авторские права (c) 2025 PPFSS
+// Авторские права (c) 2026 PPFSS
 // Лицензия: MIT
 
 package com.ppfss.libs.message;
 
+import com.velocitypowered.api.command.CommandSource;
+import com.velocitypowered.api.proxy.Player;
+import com.velocitypowered.api.proxy.ProxyServer;
 import lombok.Data;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Data
 @SuppressWarnings("unused")
 public class Message {
-private static Plugin plugin;
-private static final MiniMessage MINI_MESSAGE = MiniMessage.builder().strict(false).build();
-private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
-private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacyAmpersand();
-private static final Pattern LEGACY_TAG_PATTERN = Pattern.compile("</?&([\\p{L}\\p{Nd}_]+)>", Pattern.CASE_INSENSITIVE);
+    private static ProxyServer proxy;
+    private static Object plugin;
 
-    public static void load(Plugin plugin) {
-        Message.plugin = plugin;
+    private static final MiniMessage MINI_MESSAGE = MiniMessage.builder().strict(false).build();
+    private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
+    private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacyAmpersand();
+    private static final Pattern LEGACY_TAG_PATTERN = Pattern.compile("</?&([\\p{L}\\p{Nd}_]+)>", Pattern.CASE_INSENSITIVE);
+
+    public static void load(ProxyServer proxyServer, Object pluginInstance) {
+        Message.proxy = proxyServer;
+        Message.plugin = pluginInstance;
     }
 
     private final List<String> rawMessage = new CopyOnWriteArrayList<>();
@@ -71,102 +72,84 @@ private static final Pattern LEGACY_TAG_PATTERN = Pattern.compile("</?&([\\p{L}\
     }
 
     public void send(UUID uuid) {
-        Player player = Bukkit.getPlayer(uuid);
-        if (player != null) send(player);
+        proxy.getPlayer(uuid).ifPresent(this::send);
     }
 
-    public void send(Player audience) {
-        if (audience == null) return;
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                for (String line : rawMessage) {
-                    audience.sendMessage(parse(line));
-                }
+    public void send(Player player) {
+        if (player == null) return;
+        runSync(() -> {
+            for (String line : rawMessage) {
+                player.sendMessage(parse(line));
             }
-        }.runTask(plugin);
+        });
     }
 
-    public void send(CommandSender sender) {
-        if (sender == null) return;
-        if (sender instanceof Player player) {
+    public void send(CommandSource source) {
+        if (source == null) return;
+        if (source instanceof Player player) {
             send(player);
             return;
         }
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                for (String line : rawMessage) {
-                    Component component = parse(line);
-                    String legacyMessage = LEGACY.serialize(component);
-                    sender.sendMessage(legacyMessage);
-                }
+        runSync(() -> {
+            for (String line : rawMessage) {
+                source.sendMessage(parse(line));
             }
-        }.runTask(plugin);
+        });
     }
 
     public void send(Player player, @NotNull Placeholders placeholders) {
         if (player == null) return;
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                for (String line : rawMessage) {
-                    List<String> expanded = placeholders.apply(line);
-                    for (String msg : expanded) {
-                        player.sendMessage(parse(msg));
-                    }
+        runSync(() -> {
+            for (String line : rawMessage) {
+                List<String> expanded = placeholders.apply(line);
+                for (String msg : expanded) {
+                    player.sendMessage(parse(msg));
                 }
             }
-        }.runTask(plugin);
+        });
     }
 
-    public void send(CommandSender player, @NotNull Placeholders placeholders) {
-        if (player == null) return;
-        if (player instanceof Player p){
-            send(p, placeholders);
+    public void send(CommandSource source, @NotNull Placeholders placeholders) {
+        if (source == null) return;
+        if (source instanceof Player player) {
+            send(player, placeholders);
             return;
         }
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                for (String line : rawMessage) {
-                    List<String> expanded = placeholders.apply(line);
-                    for (String msg : expanded) {
-                        Component component = parse(msg);
-                        String legacyMessage = LEGACY.serialize(component);
-                        player.sendMessage(legacyMessage);
-                    }
+        runSync(() -> {
+            for (String line : rawMessage) {
+                List<String> expanded = placeholders.apply(line);
+                for (String msg : expanded) {
+                    source.sendMessage(parse(msg));
                 }
             }
-        }.runTask(plugin);
+        });
     }
 
-    public void sendActionBar(Audience player) {
-        if (player == null) return;
-        new BukkitRunnable(){
-            @Override
-            public void run(){
-                player.sendActionBar(parse(rawMessage.get(0)));
+    public void sendActionBar(Audience audience) {
+        if (audience == null) return;
+        runSync(() -> {
+            if (!rawMessage.isEmpty()) {
+                audience.sendActionBar(parse(rawMessage.get(0)));
             }
-        }.runTask(plugin);
+        });
     }
 
-    public void sendActionBar(Audience player, Placeholders placeholders) {
-        if (player == null) return;
+    public void sendActionBar(Audience audience, Placeholders placeholders) {
+        if (audience == null) return;
 
-        if (placeholders == null){
-            sendActionBar(player);
+        if (placeholders == null) {
+            sendActionBar(audience);
             return;
         }
-        new BukkitRunnable(){
-            @Override
-            public void run(){
+        runSync(() -> {
+            if (!rawMessage.isEmpty()) {
                 List<String> expanded = placeholders.apply(rawMessage.get(0));
-                player.sendActionBar(parse(expanded.get(0)));
+                if (!expanded.isEmpty()) {
+                    audience.sendActionBar(parse(expanded.get(0)));
+                }
             }
-        }.runTask(plugin);
+        });
     }
-
 
     public List<String> getText() {
         return getText(null);
@@ -209,24 +192,40 @@ private static final Pattern LEGACY_TAG_PATTERN = Pattern.compile("</?&([\\p{L}\
         return String.join("\n", rawMessage);
     }
 
+    private @NotNull Component parse(@NotNull String message) {
+        String normalized = normalizeLegacyTags(message);
 
-      private @NotNull Component parse(@NotNull String message) {
-          String translated = ChatColor.translateAlternateColorCodes('&', message);
-          String normalized = normalizeLegacyTags(translated);
-          return MINI_MESSAGE.deserialize(normalized);
-      }
+        Component legacy = LEGACY.deserialize(normalized);
+        String miniMessageInput = MINI_MESSAGE.serialize(legacy);
 
-      @SuppressWarnings("StringBufferMayBeStringBuilder")
-      private String normalizeLegacyTags(@NotNull String input) {
-          Matcher matcher = LEGACY_TAG_PATTERN.matcher(input);
-          StringBuffer buffer = new StringBuffer();
-          while (matcher.find()) {
-              String tag = matcher.group(1).toLowerCase(Locale.ROOT);
-              String replacement = matcher.group().startsWith("</") ? "</" + tag + ">" : "<" + tag + ">";
-              matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacement));
-          }
-          matcher.appendTail(buffer);
-          return buffer.toString();
-      }
+        return MINI_MESSAGE.deserialize(miniMessageInput);
+    }
 
+    @SuppressWarnings("StringBufferMayBeStringBuilder")
+    private String normalizeLegacyTags(@NotNull String input) {
+        Matcher matcher = LEGACY_TAG_PATTERN.matcher(input);
+        StringBuffer buffer = new StringBuffer();
+        while (matcher.find()) {
+            String tag = matcher.group(1).toLowerCase(Locale.ROOT);
+            String replacement = matcher.group().startsWith("</") ? "</" + tag + ">" : "<" + tag + ">";
+            matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(buffer);
+        return buffer.toString();
+    }
+
+    /**
+     * Выполняет задачу синхронно в главном потоке Velocity
+     */
+    private void runSync(Runnable task) {
+        if (proxy == null || plugin == null) {
+            task.run();
+            return;
+        }
+
+        proxy.getScheduler()
+                .buildTask(plugin, task)
+                .delay(0, TimeUnit.MILLISECONDS)
+                .schedule();
+    }
 }

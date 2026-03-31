@@ -1,5 +1,5 @@
 // PPFSS_Libs Plugin
-// Авторские права (c) 2025 PPFSS
+// Авторские права (c) 2026 PPFSS
 // Лицензия: MIT
 
 package com.ppfss.libs.config;
@@ -11,16 +11,15 @@ import com.ppfss.libs.ioc.IoCContainer;
 import com.ppfss.libs.serialization.GsonAdapter;
 import com.ppfss.libs.serialization.GsonAdapterLoader;
 import lombok.extern.slf4j.Slf4j;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.plugin.Plugin;
+import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.Yaml;
 
-import java.io.File;
-import java.io.InputStream;
+import java.io.*;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,22 +30,28 @@ import java.util.concurrent.atomic.AtomicReference;
 @SuppressWarnings("unused")
 public class YamlConfigLoader {
     private final AtomicReference<Gson> gson;
-    private final Plugin plugin;
-    private final TypeToken<Map<String, Object>> mapToken = new TypeToken<>() {
-    };
+    private final Path dataDirectory;
+    private final Yaml yaml;
+    private final TypeToken<Map<String, Object>> mapToken = new TypeToken<>() {};
     private final Map<String, YamlConfig> cacheConfigs = new ConcurrentHashMap<>();
 
-    @SuppressWarnings("ResultIgnored")
-    public YamlConfigLoader(Plugin plugin, IoCContainer container) {
-        this.plugin = plugin;
+    public YamlConfigLoader(Path dataDirectory, IoCContainer container) {
+        this.dataDirectory = dataDirectory;
 
-        if (!plugin.getDataFolder().exists()) {
-            if (!plugin.getDataFolder().mkdirs()){
-                log.error("Failed to create folder {}", plugin.getDataFolder().getAbsolutePath());
-                plugin.getPluginLoader().disablePlugin(plugin);
-                throw new RuntimeException("Failed to create folder " + plugin.getDataFolder().getAbsolutePath());
+        if (!Files.exists(dataDirectory)) {
+            try {
+                Files.createDirectories(dataDirectory);
+            } catch (IOException e) {
+                log.error("Failed to create directory {}", dataDirectory.toAbsolutePath(), e);
+                throw new RuntimeException("Failed to create directory " + dataDirectory.toAbsolutePath(), e);
             }
         }
+
+        // Инициализация SnakeYAML
+        DumperOptions options = new DumperOptions();
+        options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+        options.setPrettyFlow(true);
+        this.yaml = new Yaml(options);
 
         GsonBuilder builder = new GsonBuilder()
                 .setPrettyPrinting()
@@ -61,8 +66,7 @@ public class YamlConfigLoader {
         this.gson = new AtomicReference<>(builder.create());
     }
 
-
-    private boolean applyDefaultsFromClass(Object instance, YamlConfiguration config) {
+    private boolean applyDefaultsFromClass(Object instance, Map<String, Object> config) {
         boolean updated = false;
         Class<?> clazz = instance.getClass();
 
@@ -71,11 +75,11 @@ public class YamlConfigLoader {
             field.setAccessible(true);
             String path = field.getName();
 
-            if (!config.contains(path)) {
+            if (!config.containsKey(path)) {
                 try {
                     Object value = field.get(instance);
                     if (value != null) {
-                        config.set(path, value);
+                        config.put(path, value);
                         updated = true;
                     }
                 } catch (IllegalAccessException e) {
@@ -87,49 +91,45 @@ public class YamlConfigLoader {
         return updated;
     }
 
-    private Map<String, Object> convertSectionToMap(ConfigurationSection section) {
-        Map<String, Object> result = new HashMap<>();
-        for (String key : section.getKeys(false)) {
-            Object value = section.get(key);
-            if (value instanceof ConfigurationSection) {
-                result.put(key, convertSectionToMap((ConfigurationSection) value));
-            } else {
-                result.put(key, value);
-            }
+    private Map<String, Object> flattenMap(Object obj) {
+        if (obj instanceof Map) {
+            Map<String, Object> result = new HashMap<>();
+            ((Map<?, ?>) obj).forEach((key, value) -> {
+                if (value instanceof Map) {
+                    result.put(String.valueOf(key), flattenMap(value));
+                } else {
+                    result.put(String.valueOf(key), value);
+                }
+            });
+            return result;
         }
-        return result;
+        return new HashMap<>();
     }
 
-    public void saveAll(){
+    public void saveAll() {
         cacheConfigs.values().forEach(this::saveConfig);
     }
 
     public void saveConfig(YamlConfig instance) {
-        YamlConfiguration config = new YamlConfiguration();
-        File file = instance.getFile();
+        Path file = instance.getFile();
 
-        try {
-            config.load(file);
-        } catch (Exception exception) {
-            log.info("Create config file {}", file.getName());
+        if (!Files.exists(file)) {
             try {
-                if (!file.createNewFile()){
-                    throw new RuntimeException("Can't create file: " + file.getName());
-                }
-            } catch (Exception ex) {
-                throw new RuntimeException("Can't create file: " + file.getName(), ex);
+                Files.createFile(file);
+                log.info("Created config file {}", file.getFileName());
+            } catch (IOException e) {
+                throw new RuntimeException("Can't create file: " + file.getFileName(), e);
             }
         }
 
         String json = getGson().toJson(instance);
         Map<String, Object> map = getGson().fromJson(json, mapToken.getType());
-        map.forEach(config::set);
 
-        try {
-            config.save(file);
-        } catch (Exception exception) {
-            log.error("Error while saving config {}", file.getName(), exception);
-            throw new RuntimeException("Error while saving config " + file.getName(), exception);
+        try (Writer writer = Files.newBufferedWriter(file)) {
+            yaml.dump(map, writer);
+        } catch (IOException e) {
+            log.error("Error while saving config {}", file.getFileName(), e);
+            throw new RuntimeException("Error while saving config " + file.getFileName(), e);
         }
     }
 
@@ -152,11 +152,11 @@ public class YamlConfigLoader {
                 return type.cast(cached);
             }
 
-            File file = new File(plugin.getDataFolder(), fileName);
+            Path file = dataDirectory.resolve(fileName);
 
-            if (!file.exists()) {
-                try (InputStream in = plugin.getResource(fileName)) {
-
+            if (!Files.exists(file)) {
+                // Попытка скопировать из ресурсов (если есть)
+                try (InputStream in = getClass().getClassLoader().getResourceAsStream(fileName)) {
                     if (in == null) {
                         instance.setFile(file);
                         instance.setConfigLoader(this);
@@ -166,16 +166,18 @@ public class YamlConfigLoader {
                         return instance;
                     }
 
-                    Files.copy(in, file.toPath());
-
-                } catch (Exception exception) {
-                    log.error("Can't copy {}", file.getName(), exception);
-                    throw new RuntimeException("Can't copy " + file.getName(), exception);
+                    Files.copy(in, file);
+                } catch (IOException e) {
+                    log.error("Can't copy {}", fileName, e);
+                    throw new RuntimeException("Can't copy " + fileName, e);
                 }
             }
 
-            YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
-            Map<String, Object> data = convertSectionToMap(config);
+            Map<String, Object> data;
+            try (Reader reader = Files.newBufferedReader(file)) {
+                Object loaded = yaml.load(reader);
+                data = flattenMap(loaded);
+            }
 
             String json = getGson().toJson(data);
             T loaded = getGson().fromJson(json, type);
@@ -183,18 +185,20 @@ public class YamlConfigLoader {
             loaded.setFile(file);
             loaded.setConfigLoader(this);
 
-            boolean updated = applyDefaultsFromClass(loaded, config);
+            boolean updated = applyDefaultsFromClass(loaded, data);
             if (updated) {
-                config.save(file);
-                log.info("Updated config with new defaults: {}", file.getName());
+                try (Writer writer = Files.newBufferedWriter(file)) {
+                    yaml.dump(data, writer);
+                }
+                log.info("Updated config with new defaults: {}", fileName);
             }
 
             cacheConfigs.put(fileName, loaded);
             return loaded;
 
-        } catch (Exception exception) {
-            log.error("Can't load {}", type.getName(), exception);
-            throw new RuntimeException("Can't load " + type.getName(), exception);
+        } catch (Exception e) {
+            log.error("Can't load {}", type.getName(), e);
+            throw new RuntimeException("Can't load " + type.getName(), e);
         }
     }
 

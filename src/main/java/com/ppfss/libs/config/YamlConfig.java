@@ -7,14 +7,14 @@ package com.ppfss.libs.config;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.io.File;
+import java.nio.file.Path;
 
 @SuppressWarnings("unused")
 @Setter
 @Getter
 public abstract class YamlConfig {
     private transient YamlConfigLoader configLoader = null;
-    private transient File file;
+    private transient Path file;
 
     public YamlConfig() {}
 

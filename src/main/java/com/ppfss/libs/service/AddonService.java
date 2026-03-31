@@ -6,21 +6,20 @@ package com.ppfss.libs.service;
 
 import com.ppfss.libs.ioc.annotation.Component;
 import com.ppfss.libs.ioc.annotation.Inject;
+import com.velocitypowered.api.proxy.ProxyServer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.bukkit.plugin.java.JavaPlugin;
 
 @Slf4j
 @Component
 public class AddonService {
-
     @Getter
     private static boolean LUCK_PERMS = false;
 
     @Inject
-    public AddonService(JavaPlugin plugin) {
+    public AddonService(ProxyServer server) {
 
-        LUCK_PERMS = plugin.getServer().getPluginManager().getPlugin("LuckPerms") != null;
+        LUCK_PERMS = server.getPluginManager().getPlugin("LuckPerms").isPresent();
 
         log.info("LuckPerms is {}", LUCK_PERMS);
     }

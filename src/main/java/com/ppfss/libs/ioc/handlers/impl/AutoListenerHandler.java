@@ -8,17 +8,16 @@ import com.ppfss.libs.ioc.IoCContainer;
 import com.ppfss.libs.ioc.annotation.AutoListener;
 import com.ppfss.libs.ioc.handlers.ClassAnnotationHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.bukkit.event.Listener;
 
+import java.lang.reflect.Method;
 import java.util.Set;
 
-@SuppressWarnings("unchecked")
 @Slf4j
 public class AutoListenerHandler implements ClassAnnotationHandler<AutoListener> {
-    private final Set<Class<? extends Listener>> listeners;
+    private final Set<Class<?>> listeners;
 
-    public AutoListenerHandler(Set<Class<? extends Listener>> classes) {
-        listeners = classes;
+    public AutoListenerHandler(Set<Class<?>> listeners) {
+        this.listeners = listeners;
     }
 
     @Override
@@ -28,13 +27,20 @@ public class AutoListenerHandler implements ClassAnnotationHandler<AutoListener>
 
     @Override
     public void handle(IoCContainer container, Class<?> clazz, AutoListener annotation) {
-        if (!Listener.class.isAssignableFrom(clazz)) {
-            log.error("Class {} is not a Listener", clazz.getName());
+        if (!hasSubscribeMethods(clazz)) {
+            log.warn("Class {} marked as @AutoListener but has no @Subscribe methods", clazz.getName());
             return;
         }
 
-        listeners.add((Class<? extends Listener>) clazz);
+        listeners.add(clazz);
     }
 
-
+    private boolean hasSubscribeMethods(Class<?> clazz) {
+        for (Method method : clazz.getDeclaredMethods()) {
+            if (method.isAnnotationPresent(com.velocitypowered.api.event.Subscribe.class)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

@@ -3,19 +3,24 @@
 // Лицензия: MIT
 package com.ppfss.libs.plugin;
 
+import com.google.inject.Inject;
+import com.velocitypowered.api.plugin.Plugin;
+import com.velocitypowered.api.plugin.PluginContainer;
+import com.velocitypowered.api.plugin.annotation.DataDirectory;
+import com.velocitypowered.api.proxy.ProxyServer;
 import lombok.Getter;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.slf4j.Logger;
 
+import java.nio.file.Path;
+
+@Plugin(id = "ppfss_libs", name = "PPFSS_Libs", authors = "PPFSS", version = "0.0.6")
 @SuppressWarnings("unused")
 public final class PPFSS_Libs extends PPFSS_Template {
     @Getter
     public static PPFSS_Libs instance;
 
-    @Override
-    public void onEnable() {
-        log.info("[PPFSSLibs] Enabled");
-
-        log.info(getPluginIoC().get(JavaPlugin.class).getName());
+    @Inject
+    public PPFSS_Libs(ProxyServer server, Logger logger, PluginContainer container, @DataDirectory Path dataDirectory) {
+        super(server, logger, container, dataDirectory);
     }
-
 }

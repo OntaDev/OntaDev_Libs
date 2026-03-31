@@ -1,0 +1,9 @@
+{
+  "id": "ppfss_libs",
+  "name": "PPFSS_Libs",
+  "version": "${project.version}",
+  "description": "PPFSS Libraries for Velocity",
+  "authors": ["PPFSS"],
+  "main": "com.ppfss.libs.plugin.PPFSS_Libs",
+  "dependencies": []
+}
