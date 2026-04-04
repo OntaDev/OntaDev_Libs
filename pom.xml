@@ -6,7 +6,7 @@
 
     <groupId>com.ppfss</groupId>
     <artifactId>libs</artifactId>
-    <version>0.0.5-velocity</version>
+    <version>0.0.6-velocity</version>
     <packaging>jar</packaging>
 
     <name>Libs</name>

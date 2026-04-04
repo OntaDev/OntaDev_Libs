@@ -4,6 +4,7 @@
 
 package com.ppfss.libs.ioc;
 
+import com.ppfss.libs.ioc.annotation.Component;
 import com.ppfss.libs.ioc.handlers.ClassAnnotationHandler;
 import com.ppfss.libs.ioc.handlers.FieldAnnotationHandler;
 import com.ppfss.libs.ioc.handlers.MethodAnnotationHandler;
@@ -64,14 +65,21 @@ public class IoCContainer {
      */
 
     private void scanClassAnnotations(Set<Class<?>> classes) {
-
         for (Class<?> clazz : classes) {
+            boolean isComponent = false;
 
             for (Annotation annotation : clazz.getAnnotations()) {
+                if (annotation.annotationType().isAnnotationPresent(Component.class)) {
+                    isComponent = true;
+                }
 
                 findHandler(classHandlers, annotation)
                         .map(h -> ((ClassAnnotationHandler<Annotation>) h))
                         .ifPresent(handler -> handler.handle(this, clazz, annotation));
+            }
+
+            if (isComponent) {
+                registerComponent(clazz);
             }
         }
     }
@@ -82,11 +90,36 @@ public class IoCContainer {
      */
 
     private void instantiateComponents() {
+        // сортируем по приоритету: больше — раньше
+        List<Class<?>> sortedComponents = new ArrayList<>(components);
 
-        for (Class<?> component : components) {
+        sortedComponents.sort((c1, c2) -> {
+            int p1 = getPriority(c1);
+            int p2 = getPriority(c2);
+            return Integer.compare(p2, p1); // higher priority first
+        });
+
+        for (Class<?> component : sortedComponents) {
             create(component);
         }
     }
+
+    private int getPriority(Class<?> clazz) {
+        for (Annotation ann : clazz.getAnnotations()) {
+            if (ann.annotationType().isAnnotationPresent(Component.class)) {
+                try {
+                    Method m = ann.annotationType().getMethod("priority");
+                    return (int) m.invoke(ann);
+                } catch (NoSuchMethodException ignored) {
+                } catch (Exception e) {
+                    log.error("Failed get priority for " + clazz.getName(), e);
+                }
+            }
+        }
+        return 0;
+    }
+
+
 
 
     /*
