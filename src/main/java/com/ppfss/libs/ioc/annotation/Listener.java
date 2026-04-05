@@ -1,4 +1,4 @@
-// PPFSS_Libs Plugin
+// PPFSS_Libs Plugin 
 // Авторские права (c) 2026 PPFSS
 // Лицензия: MIT
 
@@ -11,7 +11,5 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@Priority(priority = 100)
-public @interface Service {
-    int priority() default 0;
+public @interface Listener {
 }

@@ -8,6 +8,7 @@ import com.ppfss.libs.ioc.PluginIoC;
 import com.ppfss.libs.message.Message;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
+import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.PluginContainer;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
@@ -35,9 +36,14 @@ public abstract class PPFSS_Template {
         this.dataDirectory = dataDirectory;
     }
 
-    @Subscribe
+    @Subscribe(priority = Short.MAX_VALUE)
     public void onProxyInitialization(ProxyInitializeEvent event) {
         Message.load(server, this);
         pluginIoC = new PluginIoC(this, server, dataDirectory, container);
+    }
+
+    @Subscribe(priority = Short.MAX_VALUE)
+    public void onProxyShutdown(ProxyShutdownEvent event) {
+        pluginIoC.shutdownPlugin();
     }
 }

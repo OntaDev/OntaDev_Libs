@@ -4,25 +4,23 @@
 
 package com.ppfss.libs.ioc;
 
-import com.ppfss.libs.command.AbstractCommand;
-import com.ppfss.libs.config.YamlConfig;
 import com.ppfss.libs.config.YamlConfigLoader;
-import com.ppfss.libs.ioc.handlers.impl.AutoListenerHandler;
-import com.ppfss.libs.ioc.handlers.impl.ComponentHandler;
-import com.ppfss.libs.ioc.handlers.impl.GsonAdapterHandler;
-import com.ppfss.libs.ioc.handlers.impl.InjectFieldHandler;
+import com.ppfss.libs.ioc.handlers.impl.*;
+import com.ppfss.libs.message.Message;
+import com.ppfss.libs.serialization.GsonAdapter;
+import com.ppfss.libs.serialization.adapters.ComponentAdapter;
+import com.ppfss.libs.serialization.adapters.EnumSetAdapter;
+import com.ppfss.libs.serialization.adapters.MessageAdapter;
 import com.ppfss.libs.util.AnnotationScanner;
 import com.velocitypowered.api.plugin.PluginContainer;
 import com.velocitypowered.api.proxy.ProxyServer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.kyori.adventure.text.Component;
 
 import java.lang.reflect.Modifier;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 
 @Slf4j
@@ -31,13 +29,14 @@ public class PluginIoC {
 
     /**
      * -- GETTER --
-     *  Получить IoCContainer для ручного доступа
+     * Получить IoCContainer для ручного доступа
      */
     @Getter
     private final IoCContainer container = new IoCContainer();
 
     private final Object plugin;
     private final ProxyServer proxy;
+    private final ShutdownHandler shutdownHandler;
     private final Set<Class<?>> listeners = new HashSet<>();
     private final YamlConfigLoader configLoader;
 
@@ -51,12 +50,12 @@ public class PluginIoC {
      * - Инициализацию IoC контейнера<p>
      * - Регистрацию Listener и Command<p>
      * <p>
-     * @param plugin Экземпляр плагина (главный класс)
-     * @param proxy ProxyServer экземпляр
-     * @param dataDirectory Директория данных плагина
+     *
+     * @param plugin          Экземпляр плагина (главный класс)
+     * @param proxy           ProxyServer экземпляр
+     * @param dataDirectory   Директория данных плагина
      * @param pluginContainer PluginContainer плагина
      */
-    @SuppressWarnings("unchecked")
     public PluginIoC(Object plugin, ProxyServer proxy, Path dataDirectory, PluginContainer pluginContainer) {
         this.plugin = plugin;
         this.proxy = proxy;
@@ -67,39 +66,47 @@ public class PluginIoC {
         registerInstance(PluginContainer.class, pluginContainer);
         registerInstance(PluginIoC.class, this);
 
-        registerDefaultHandlers();
+        shutdownHandler = new ShutdownHandler();
 
         Set<Class<?>> classes = AnnotationScanner.scanPlugin(plugin);
 
-        configLoader = new YamlConfigLoader(dataDirectory, container);
-        registerInstance(YamlConfigLoader.class, configLoader);
-
-        List<Class<? extends YamlConfig>> configClasses = new ArrayList<>();
-        List<Class<? extends AbstractCommand>> commandClasses = new ArrayList<>();
+        Map<Class<?>, Object> adapters = new HashMap<>();
 
         for (Class<?> clazz : classes) {
             if (Modifier.isAbstract(clazz.getModifiers())) {
                 continue;
             }
 
-            if (YamlConfig.class.isAssignableFrom(clazz)) {
-                configClasses.add((Class<? extends YamlConfig>) clazz);
+            GsonAdapter gsonAdapter = clazz.getAnnotation(GsonAdapter.class);
+
+            if (gsonAdapter == null) {
+                continue;
             }
 
-            if (AbstractCommand.class.isAssignableFrom(clazz)) {
-                commandClasses.add((Class<? extends AbstractCommand>) clazz);
+            if (clazz.isAnnotation()) {
+                continue;
             }
+
+            log.info("Registering adapter for {}", clazz.getName());
+
+            Class<?> type = gsonAdapter.value();
+            Object adapter = container.create(clazz);
+
+            adapters.put(type, adapter);
         }
 
-        // Регистрируем конфиги
-        configClasses.forEach(this::registerYamlConfig);
+        registerDefaultAdapters(adapters, container);
+
+
+        configLoader = new YamlConfigLoader(dataDirectory, adapters);
+
+        registerInstance(YamlConfigLoader.class, configLoader);
+
+        registerDefaultHandlers();
 
         // Инициализируем контейнер
         container.initialize(classes);
 
-        // Регистрируем слушателей и команды
-        listeners.forEach(this::registerListener);
-        commandClasses.forEach(this::registerCommand);
     }
 
     @SuppressWarnings("unchecked")
@@ -108,54 +115,18 @@ public class PluginIoC {
         registerInstance(pluginClass, plugin);
     }
 
-
-    /**
-     * Создаёт и регистрирует команду через IoC контейнер
-     * <p>
-     * Если команда уже существует в контейнере — используется существующий instance
-     * Если команда ещё не зарегистрирована — выполняется регистрация
-     */
-    private <T extends AbstractCommand> void registerCommand(Class<T> clazz){
-        T command = container.getIfExists(clazz);
-
-        if (command == null){
-            command = container.create(clazz);
-            container.registerInstance(clazz, command);
-        }
-
-        if (!command.isRegistered()){
-            command.register(proxy);
-        }
+    private boolean isConcreteClass(Class<?> clazz) {
+        return !clazz.isInterface()
+                && !clazz.isAnnotation()
+                && !clazz.isEnum()
+                && !clazz.isRecord()
+                && !Modifier.isAbstract(clazz.getModifiers());
     }
 
-    /**
-     * <p> Загружает <b>YamlConfig</b> через <b>YamlConfigLoader</b></p>
-     * <p> и регистрирует в <b>IoC</b> контейнере </p>
-     * <p>
-     * Если конфиг уже зарегистрирован — повторная загрузка не выполняется
-     */
-    private <T extends YamlConfig> void registerYamlConfig(Class<T> clazz) {
-        // TODO: LazyLoad
-        T config = container.getIfExists(clazz);
-
-        if (config != null) {
-            return;
-        }
-
-        config = configLoader.loadFromClass(clazz);
-        container.registerInstance(clazz, config);
-    }
-
-    /**
-     * Регистрирует listener в ProxyServer
-     */
-    private void registerListener(Class<?> clazz) {
-        Object listener = container.getIfExists(clazz);
-
-        if (listener != null){
-            proxy.getEventManager().register(plugin, listener);
-            log.info("Registered listener for plugin {}", clazz.getName());
-        }
+    private void registerDefaultAdapters(Map<Class<?>, Object> adapters, IoCContainer container) {
+        adapters.put(Message.class, container.create(MessageAdapter.class));
+        adapters.put(EnumSet.class, container.create(EnumSetAdapter.class));
+        adapters.put(Component.class, container.create(ComponentAdapter.class));
     }
 
     /**
@@ -163,12 +134,22 @@ public class PluginIoC {
      */
     private void registerDefaultHandlers() {
         // Классы
+        container.registerClassHandler(new ConfigHandler(configLoader));
+        container.registerClassHandler(new RepositoryHandler());
         container.registerClassHandler(new ComponentHandler());
-        container.registerClassHandler(new GsonAdapterHandler());
-        container.registerClassHandler(new AutoListenerHandler(listeners));
+        container.registerClassHandler(new ServiceHandler());
+        container.registerClassHandler(new CommandHandler(proxy));
+        container.registerClassHandler(new ListenerHandler(proxy, plugin));
 
         // Поля
         container.registerFieldHandler(new InjectFieldHandler());
+
+        // Методы
+        container.registerMethodHandler(shutdownHandler);
+    }
+
+    public void shutdownPlugin() {
+        shutdownHandler.runAll();
     }
 
     /**
@@ -181,6 +162,7 @@ public class PluginIoC {
     /**
      * Зарегистрировать вручную конкретный компонент
      */
+    @Deprecated
     public void registerComponent(Class<?> clazz) {
         container.registerComponent(clazz);
     }

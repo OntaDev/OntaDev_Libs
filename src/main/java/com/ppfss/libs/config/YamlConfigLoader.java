@@ -6,36 +6,34 @@ package com.ppfss.libs.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
-import com.ppfss.libs.ioc.IoCContainer;
-import com.ppfss.libs.serialization.GsonAdapter;
-import com.ppfss.libs.serialization.GsonAdapterLoader;
 import lombok.extern.slf4j.Slf4j;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+import java.io.Writer;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @SuppressWarnings("unused")
 public class YamlConfigLoader {
-    private final AtomicReference<Gson> gson;
+    private final Gson gson;
     private final Path dataDirectory;
     private final Yaml yaml;
     private final TypeToken<Map<String, Object>> mapToken = new TypeToken<>() {};
     private final Map<String, YamlConfig> cacheConfigs = new ConcurrentHashMap<>();
 
-    public YamlConfigLoader(Path dataDirectory, IoCContainer container) {
+    public YamlConfigLoader(Path dataDirectory, Map<Class<?>, Object> adapters) {
         this.dataDirectory = dataDirectory;
 
         if (!Files.exists(dataDirectory)) {
@@ -43,192 +41,144 @@ public class YamlConfigLoader {
                 Files.createDirectories(dataDirectory);
             } catch (IOException e) {
                 log.error("Failed to create directory {}", dataDirectory.toAbsolutePath(), e);
-                throw new RuntimeException("Failed to create directory " + dataDirectory.toAbsolutePath(), e);
+                throw new RuntimeException("Could not initialize config directory", e);
             }
         }
 
-        // Инициализация SnakeYAML
+        // 1. Настройка SnakeYAML
         DumperOptions options = new DumperOptions();
         options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+        options.setIndent(2);
         options.setPrettyFlow(true);
         this.yaml = new Yaml(options);
 
+        // 2. Настройка Gson
         GsonBuilder builder = new GsonBuilder()
                 .setPrettyPrinting()
                 .excludeFieldsWithModifiers(Modifier.TRANSIENT, Modifier.STATIC);
 
-        container.getAllClassesWithAnnotation(GsonAdapter.class).forEach(adapterClass -> {
-            Object adapter = container.get(adapterClass);
-            GsonAdapter annotation = adapterClass.getAnnotation(GsonAdapter.class);
-            builder.registerTypeAdapter(annotation.value(), adapter);
-        });
+        if (adapters != null) {
+            adapters.forEach(builder::registerTypeAdapter);
+        }
 
-        this.gson = new AtomicReference<>(builder.create());
+        this.gson = builder.create();
     }
 
-    private boolean applyDefaultsFromClass(Object instance, Map<String, Object> config) {
-        boolean updated = false;
-        Class<?> clazz = instance.getClass();
+    /**
+     * ЛОГИКА СОХРАНЕНИЯ: Class -> Gson -> Snake -> Файл
+     */
+    public void saveConfig(YamlConfig instance) {
+        Path file = instance.getFile();
 
-        for (Field field : clazz.getDeclaredFields()) {
-            if (Modifier.isStatic(field.getModifiers()) || Modifier.isTransient(field.getModifiers())) continue;
-            field.setAccessible(true);
-            String path = field.getName();
+        try {
+            if (!Files.exists(file)) {
+                Files.createFile(file);
+            }
 
-            if (!config.containsKey(path)) {
-                try {
-                    Object value = field.get(instance);
-                    if (value != null) {
-                        config.put(path, value);
-                        updated = true;
-                    }
-                } catch (IllegalAccessException e) {
-                    log.error("Failed to read field {} in {}", path, clazz.getSimpleName(), e);
+            // Переводим объект в JsonElement (Gson)
+            JsonElement jsonElement = gson.toJsonTree(instance);
+
+            // Превращаем JsonElement в Map (SnakeYAML лучше всего работает с Map)
+            Map<String, Object> yamlMap = gson.fromJson(jsonElement, mapToken.getType());
+
+            try (Writer writer = Files.newBufferedWriter(file)) {
+                yaml.dump(yamlMap, writer);
+            }
+        } catch (IOException e) {
+            log.error("Error while saving config {}", instance.getFileName(), e);
+            throw new RuntimeException("Failed to save " + instance.getFileName(), e);
+        }
+    }
+
+    /**
+     * ЛОГИКА ЗАГРУЗКИ: Файл -> Snake -> Gson -> Class
+     */
+    public <T extends YamlConfig> T loadFromClass(Class<T> type) {
+        try {
+            T instance = createEmptyInstance(type);
+            String fileName = normalize(instance.getFileName());
+
+            // Кэширование
+            if (cacheConfigs.containsKey(fileName)) {
+                return type.cast(cacheConfigs.get(fileName));
+            }
+
+            Path file = dataDirectory.resolve(fileName);
+            instance.setFile(file);
+            instance.setConfigLoader(this);
+
+            // Если файла нет — создаем из ресурсов или дефолтный
+            if (!Files.exists(file)) {
+                handleMissingFile(file, fileName, instance);
+                cacheConfigs.put(fileName, instance);
+                return instance;
+            }
+
+            // 1. Загружаем YAML в Map через SnakeYAML
+            Map<String, Object> loadedMap;
+            try (Reader reader = Files.newBufferedReader(file)) {
+                Object rawYaml = yaml.load(reader);
+                // Преобразуем в Map (поддерживает вложенность)
+                JsonElement jsonFromYaml = gson.toJsonTree(rawYaml);
+
+                // 2. Превращаем промежуточный Json в целевой Класс через Gson
+                T loadedInstance = gson.fromJson(jsonFromYaml, type);
+
+                loadedInstance.setFile(file);
+                loadedInstance.setConfigLoader(this);
+
+                // 3. Проверка на наличие новых полей (Defaults)
+                if (applyDefaultsFromClass(loadedInstance, rawYaml instanceof Map ? (Map) rawYaml : null)) {
+                    saveConfig(loadedInstance);
+                    log.info("Config {} updated with new default values.", fileName);
                 }
+
+                cacheConfigs.put(fileName, loadedInstance);
+                return loadedInstance;
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to load config class: {}", type.getSimpleName(), e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private <T extends YamlConfig> void handleMissingFile(Path file, String fileName, T instance) throws IOException {
+        try (InputStream in = getClass().getClassLoader().getResourceAsStream(fileName)) {
+            if (in != null) {
+                Files.copy(in, file);
+            } else {
+                saveConfig(instance);
             }
         }
-
-        return updated;
     }
 
-    private Map<String, Object> flattenMap(Object obj) {
-        if (obj instanceof Map) {
-            Map<String, Object> result = new HashMap<>();
-            ((Map<?, ?>) obj).forEach((key, value) -> {
-                if (value instanceof Map) {
-                    result.put(String.valueOf(key), flattenMap(value));
-                } else {
-                    result.put(String.valueOf(key), value);
-                }
-            });
-            return result;
+    private <T> T createEmptyInstance(Class<T> type) throws Exception {
+        Constructor<T> constructor = type.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        return constructor.newInstance();
+    }
+
+    private boolean applyDefaultsFromClass(Object instance, Map<String, Object> rawData) {
+        if (rawData == null) return false;
+        boolean updated = false;
+
+        for (Field field : instance.getClass().getDeclaredFields()) {
+            if (Modifier.isStatic(field.getModifiers()) || Modifier.isTransient(field.getModifiers())) continue;
+
+            if (!rawData.containsKey(field.getName())) {
+                updated = true; // Найдено поле в классе, которого нет в YAML
+                break;
+            }
         }
-        return new HashMap<>();
+        return updated;
     }
 
     public void saveAll() {
         cacheConfigs.values().forEach(this::saveConfig);
     }
 
-    public void saveConfig(YamlConfig instance) {
-        Path file = instance.getFile();
-
-        if (!Files.exists(file)) {
-            try {
-                Files.createFile(file);
-                log.info("Created config file {}", file.getFileName());
-            } catch (IOException e) {
-                throw new RuntimeException("Can't create file: " + file.getFileName(), e);
-            }
-        }
-
-        String json = getGson().toJson(instance);
-        Map<String, Object> map = getGson().fromJson(json, mapToken.getType());
-
-        try (Writer writer = Files.newBufferedWriter(file)) {
-            yaml.dump(map, writer);
-        } catch (IOException e) {
-            log.error("Error while saving config {}", file.getFileName(), e);
-            throw new RuntimeException("Error while saving config " + file.getFileName(), e);
-        }
-    }
-
-    public <T extends YamlConfig> T loadFromClass(Class<T> type) {
-        Constructor<T> constructor = findEmptyConstructor(type);
-
-        if (constructor == null) {
-            log.error("Can't find empty constructor for {}", type.getName());
-            throw new RuntimeException("Can't find empty constructor for " + type.getName());
-        }
-
-        try {
-            constructor.setAccessible(true);
-            T instance = constructor.newInstance();
-
-            String fileName = normalize(instance.getFileName());
-
-            YamlConfig cached = cacheConfigs.get(fileName);
-            if (type.isInstance(cached)) {
-                return type.cast(cached);
-            }
-
-            Path file = dataDirectory.resolve(fileName);
-
-            if (!Files.exists(file)) {
-                // Попытка скопировать из ресурсов (если есть)
-                try (InputStream in = getClass().getClassLoader().getResourceAsStream(fileName)) {
-                    if (in == null) {
-                        instance.setFile(file);
-                        instance.setConfigLoader(this);
-                        saveConfig(instance);
-
-                        cacheConfigs.put(fileName, instance);
-                        return instance;
-                    }
-
-                    Files.copy(in, file);
-                } catch (IOException e) {
-                    log.error("Can't copy {}", fileName, e);
-                    throw new RuntimeException("Can't copy " + fileName, e);
-                }
-            }
-
-            Map<String, Object> data;
-            try (Reader reader = Files.newBufferedReader(file)) {
-                Object loaded = yaml.load(reader);
-                data = flattenMap(loaded);
-            }
-
-            String json = getGson().toJson(data);
-            T loaded = getGson().fromJson(json, type);
-
-            loaded.setFile(file);
-            loaded.setConfigLoader(this);
-
-            boolean updated = applyDefaultsFromClass(loaded, data);
-            if (updated) {
-                try (Writer writer = Files.newBufferedWriter(file)) {
-                    yaml.dump(data, writer);
-                }
-                log.info("Updated config with new defaults: {}", fileName);
-            }
-
-            cacheConfigs.put(fileName, loaded);
-            return loaded;
-
-        } catch (Exception e) {
-            log.error("Can't load {}", type.getName(), e);
-            throw new RuntimeException("Can't load " + type.getName(), e);
-        }
-    }
-
-    private <T> Constructor<T> findEmptyConstructor(Class<T> type) {
-        try {
-            Constructor<T> constructor = type.getDeclaredConstructor();
-            constructor.setAccessible(true);
-            return constructor;
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
     private String normalize(String name) {
         return name.endsWith(".yml") ? name : name + ".yml";
-    }
-
-    public void reloadAdapters(List<Class<?>> adapterClasses) {
-        gson.set(createGson(adapterClasses));
-    }
-
-    private static Gson createGson(List<Class<?>> adapterClasses) {
-        GsonBuilder builder = new GsonBuilder()
-                .setPrettyPrinting()
-                .excludeFieldsWithModifiers(Modifier.TRANSIENT, Modifier.STATIC);
-        GsonAdapterLoader.registerAll(builder, adapterClasses);
-        return builder.create();
-    }
-
-    private Gson getGson() {
-        return gson.get();
     }
 }

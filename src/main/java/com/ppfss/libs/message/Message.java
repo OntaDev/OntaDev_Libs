@@ -196,9 +196,8 @@ public class Message {
         String normalized = normalizeLegacyTags(message);
 
         Component legacy = LEGACY.deserialize(normalized);
-        String miniMessageInput = MINI_MESSAGE.serialize(legacy);
 
-        return MINI_MESSAGE.deserialize(miniMessageInput);
+        return MINI_MESSAGE.deserialize(normalized).mergeStyle(legacy);
     }
 
     @SuppressWarnings("StringBufferMayBeStringBuilder")

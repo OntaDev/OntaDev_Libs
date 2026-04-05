@@ -64,16 +64,34 @@ public final class AnnotationScanner {
                         "org.spongepowered.configurate",
 
                         // Caffeine (кэширование)
-                        "com.github.benmanes.caffeine"
+                        "com.github.benmanes.caffeine",
+
+                        // Базы данных
+                        "com.zaxxer.hikari",
+                        "org.h2",
+                        "com.mysql",
+                        "org.postgresql",
+
+                        "com.mysql.cj",
+                        "com.zaxxer.hikari.hibernate",
+                        "org.h2.server.web",
+                        "org.h2.util",
+                        "org.postgresql.osgi",
+
+                        // Дополнительно часто полезно
+                        "org.hibernate",
+                        "com.mchange.v2.c3p0",             // c3p0 integration
+                        "jakarta.servlet",
+                        "javax.servlet"
                 )
 
                 .scan()) {
 
             scanResult.getAllClasses().forEach(classInfo -> {
                 try {
-                    classes.add(classInfo.loadClass());
+                    classes.add(classInfo.loadClass(false));
                 } catch (Throwable throwable) {
-                    log.warn("Failed to load class {}", classInfo.getName(), throwable);
+//                    log.debug("Failed to load class {}", classInfo.getName(), throwable);
                 }
             });
         }

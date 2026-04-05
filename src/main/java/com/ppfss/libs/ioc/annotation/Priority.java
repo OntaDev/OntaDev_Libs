@@ -1,7 +1,3 @@
-// PPFSS_Libs Plugin 
-// Авторские права (c) 2026 PPFSS
-// Лицензия: MIT
-
 package com.ppfss.libs.ioc.annotation;
 
 import java.lang.annotation.ElementType;
@@ -10,6 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface AutoListener {
+@Target(ElementType.ANNOTATION_TYPE)
+public @interface Priority {
+    int priority() default 0;
 }

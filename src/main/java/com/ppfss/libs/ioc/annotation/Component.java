@@ -11,6 +11,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
+@Priority(priority = 101)
 public @interface Component {
     int priority() default 0;
 }

@@ -5,18 +5,18 @@
 package com.ppfss.libs.ioc.handlers.impl;
 
 import com.ppfss.libs.ioc.IoCContainer;
-import com.ppfss.libs.ioc.annotation.Component;
+import com.ppfss.libs.ioc.annotation.Repository;
 import com.ppfss.libs.ioc.handlers.ClassAnnotationHandler;
 
-public class ComponentHandler implements ClassAnnotationHandler<Component> {
+public class RepositoryHandler implements ClassAnnotationHandler<Repository> {
 
     @Override
-    public Class<Component> getAnnotation() {
-        return Component.class;
+    public Class<Repository> getAnnotation() {
+        return Repository.class;
     }
 
     @Override
-    public void handle(IoCContainer container, Class<?> clazz, Component annotation) {
+    public void handle(IoCContainer container, Class<?> clazz, Repository annotation) {
         int priority = annotation.priority();
         container.registerComponent(clazz, priority, annotation.annotationType());
     }

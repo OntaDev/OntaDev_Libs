@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@Priority(priority = 100)
-public @interface Service {
+@Priority(priority = 99)
+public @interface Command {
     int priority() default 0;
 }

@@ -14,4 +14,16 @@ public interface ClassAnnotationHandler<A extends Annotation> {
 
     void handle(IoCContainer container, Class<?> clazz, A annotation);
 
+    /**
+     * Create: можно вернуть собственный объект вместо стандартного new.
+     * Если возвращается null, IoC создаёт объект сам.
+     */
+    default Object preCreate(IoCContainer container, Class<?> clazz, A annotation) {
+        return null;
+    }
+
+    /**
+     * Post-create: вызывается после создания объекта.
+     */
+    default void postCreate(IoCContainer container, Object instance, A annotation) {}
 }

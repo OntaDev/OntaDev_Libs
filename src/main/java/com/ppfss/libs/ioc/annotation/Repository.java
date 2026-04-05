@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@Component
+@Priority(priority = 102)
 public @interface Repository {
     int priority() default 0;
 }
