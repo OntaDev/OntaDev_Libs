@@ -4,20 +4,20 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.ppfss</groupId>
+    <groupId>com.ontadev</groupId>
     <artifactId>libs</artifactId>
-    <version>0.0.5</version>
+    <version>0.0.8</version>
     <packaging>jar</packaging>
 
-    <name>PPFSS_Libs</name>
+    <name>OntaDev_Libs</name>
 
     <properties>
-        <java.version>16</java.version>
+        <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <build>
-        <finalName>PPFSS_Libs</finalName>
+        <finalName>OntaDev_Libs</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -26,35 +26,52 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.38</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-shade-plugin</artifactId>
-            <version>3.2.4</version>
-            <executions>
-                <execution>
-                    <phase>package</phase>
-                    <goals>
-                        <goal>shade</goal>
-                    </goals>
-                </execution>
-            </executions>
-            <configuration>
-                <filters>
-                    <filter>
-                        <artifact>*:*</artifact>
-                        <excludes>
-                            <exclude>module-info.class</exclude>
-                            <exclude>META-INF/*.SF</exclude>
-                            <exclude>META-INF/*.DSA</exclude>
-                            <exclude>META-INF/*.RSA</exclude>
-                            <exclude>META-INF/*.MF</exclude>
-                        </excludes>
-                    </filter>
-                </filters>
-            </configuration>
-        </plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.2</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>module-info.class</exclude>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                                <exclude>META-INF/*.MF</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                    <relocations>
+                        <relocation>
+                            <pattern>io.github.classgraph</pattern>
+                            <shadedPattern>com.ontadev.libs.shaded.classgraph</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.bstats</pattern>
+                            <shadedPattern>com.ontadev.libs.shaded.bstats</shadedPattern>
+                        </relocation>
+                    </relocations>
+                </configuration>
+            </plugin>
         </plugins>
         <resources>
             <resource>

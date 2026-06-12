@@ -1,10 +1,10 @@
-name: PPFSS_Libs
+name: OntaDev_Libs
 version: '${project.version}'
-main: com.ppfss.libs.plugin.PPFSS_Libs
+main: com.ontadev.libs.plugin.OntaDev_Libs
 api-version: '1.16'
 load: STARTUP
-authors: [ PPFSS ]
+authors: [ OntaDev ]
 
 soft-depend:
-  - PPFSS_Installer
+  - OntaDev_Installer
   - LuckPerms
