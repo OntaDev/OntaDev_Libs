@@ -5,7 +5,7 @@
 package com.ontadev.libs.ioc.handlers.impl;
 
 import com.ontadev.libs.ioc.IoCContainer;
-import com.ontadev.libs.ioc.annotation.Repository;
+import com.ontadev.libs.ioc.annotation.stereotype.Repository;
 import com.ontadev.libs.ioc.handlers.ClassAnnotationHandler;
 
 public class RepositoryHandler implements ClassAnnotationHandler<Repository> {

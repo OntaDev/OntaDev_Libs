@@ -4,22 +4,20 @@
 
 package com.ontadev.libs.service;
 
-import com.ontadev.libs.ioc.annotation.Component;
-import com.ontadev.libs.ioc.annotation.Inject;
+import com.ontadev.libs.ioc.annotation.injection.Inject;
+import com.ontadev.libs.ioc.annotation.stereotype.Service;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.bukkit.plugin.java.JavaPlugin;
 
 @Slf4j
-@Component
+@Service
 public class AddonService {
-
     @Getter
     private static boolean LUCK_PERMS = false;
 
     @Inject
     public AddonService(JavaPlugin plugin) {
-
         LUCK_PERMS = plugin.getServer().getPluginManager().getPlugin("LuckPerms") != null;
 
         log.info("LuckPerms is {}", LUCK_PERMS);

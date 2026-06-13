@@ -89,8 +89,8 @@ public class Message {
 
     public void send(CommandSender sender) {
         if (sender == null) return;
-        if (sender instanceof Player player) {
-            send(player);
+        if (sender instanceof Player) {
+            send((Player) sender);
             return;
         }
         new BukkitRunnable() {
@@ -122,8 +122,8 @@ public class Message {
 
     public void send(CommandSender player, @NotNull Placeholders placeholders) {
         if (player == null) return;
-        if (player instanceof Player p) {
-            send(p, placeholders);
+        if (player instanceof Player) {
+            send((Player) player, placeholders);
             return;
         }
         new BukkitRunnable() {

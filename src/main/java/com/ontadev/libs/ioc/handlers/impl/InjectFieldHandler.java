@@ -5,7 +5,7 @@
 package com.ontadev.libs.ioc.handlers.impl;
 
 import com.ontadev.libs.ioc.IoCContainer;
-import com.ontadev.libs.ioc.annotation.Inject;
+import com.ontadev.libs.ioc.annotation.injection.Inject;
 import com.ontadev.libs.ioc.handlers.FieldAnnotationHandler;
 
 import java.lang.reflect.Field;

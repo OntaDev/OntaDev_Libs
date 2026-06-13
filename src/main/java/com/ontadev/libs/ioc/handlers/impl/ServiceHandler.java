@@ -5,7 +5,7 @@
 package com.ontadev.libs.ioc.handlers.impl;
 
 import com.ontadev.libs.ioc.IoCContainer;
-import com.ontadev.libs.ioc.annotation.Service;
+import com.ontadev.libs.ioc.annotation.stereotype.Service;
 import com.ontadev.libs.ioc.handlers.ClassAnnotationHandler;
 
 public class ServiceHandler implements ClassAnnotationHandler<Service> {

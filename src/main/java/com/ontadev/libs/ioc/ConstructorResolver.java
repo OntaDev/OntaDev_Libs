@@ -4,7 +4,7 @@
 
 package com.ontadev.libs.ioc;
 
-import com.ontadev.libs.ioc.annotation.Inject;
+import com.ontadev.libs.ioc.annotation.injection.Inject;
 
 import java.lang.reflect.Constructor;
 

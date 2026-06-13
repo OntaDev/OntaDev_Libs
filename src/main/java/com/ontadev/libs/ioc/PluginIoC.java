@@ -117,7 +117,7 @@ public class PluginIoC {
         return !clazz.isInterface()
                 && !clazz.isAnnotation()
                 && !clazz.isEnum()
-                && !clazz.isRecord()
+//                && !clazz.isRecord()
                 && !Modifier.isAbstract(clazz.getModifiers());
     }
 

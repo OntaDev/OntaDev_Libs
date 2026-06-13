@@ -21,7 +21,6 @@ public abstract class OntaDev_Template extends JavaPlugin {
     public void onLoad() {
         log = LoggerFactory.getLogger(this.getClass());
 
-        pluginIoC = new PluginIoC(this);
     }
 
     @Override
@@ -32,6 +31,12 @@ public abstract class OntaDev_Template extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        pluginIoC = new PluginIoC(this);
+
         pluginIoC.onEnable();
+
+        onPluginEnable(pluginIoC);
     }
+
+    public abstract void onPluginEnable(PluginIoC pluginIoC);
 }

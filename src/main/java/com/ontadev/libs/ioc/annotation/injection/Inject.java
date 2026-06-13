@@ -2,7 +2,7 @@
 // Авторские права (c) 2026 OntaDev
 // Лицензия: MIT
 
-package com.ontadev.libs.ioc.annotation;
+package com.ontadev.libs.ioc.annotation.injection;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

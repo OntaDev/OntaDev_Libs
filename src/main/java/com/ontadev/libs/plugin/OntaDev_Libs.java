@@ -3,8 +3,9 @@
 // Лицензия: MIT
 package com.ontadev.libs.plugin;
 
+import com.ontadev.libs.ioc.PluginIoC;
+import com.ontadev.libs.message.Message;
 import lombok.Getter;
-import org.bukkit.plugin.java.JavaPlugin;
 
 @SuppressWarnings("unused")
 public final class OntaDev_Libs extends OntaDev_Template {
@@ -12,10 +13,16 @@ public final class OntaDev_Libs extends OntaDev_Template {
     public static OntaDev_Libs instance;
 
     @Override
-    public void onEnable() {
-        log.info("[OntaDevLibs] Enabled");
+    public void onLoad(){
+        Message.load(this);
 
-        log.info(getPluginIoC().get(JavaPlugin.class).getName());
+        super.onLoad();
+    }
+
+
+    @Override
+    public void onPluginEnable(PluginIoC pluginIoC) {
+        log.info("[OntaDevLibs] Enabled");
     }
 
 }

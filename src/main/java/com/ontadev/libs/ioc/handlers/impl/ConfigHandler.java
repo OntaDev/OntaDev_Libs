@@ -7,7 +7,7 @@ package com.ontadev.libs.ioc.handlers.impl;
 import com.ontadev.libs.config.YamlConfig;
 import com.ontadev.libs.config.YamlConfigLoader;
 import com.ontadev.libs.ioc.IoCContainer;
-import com.ontadev.libs.ioc.annotation.Config;
+import com.ontadev.libs.ioc.annotation.stereotype.Config;
 import com.ontadev.libs.ioc.handlers.ClassAnnotationHandler;
 import lombok.extern.slf4j.Slf4j;
 

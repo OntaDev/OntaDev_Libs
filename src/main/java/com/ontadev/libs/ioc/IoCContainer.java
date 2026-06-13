@@ -4,12 +4,15 @@
 
 package com.ontadev.libs.ioc;
 
-import com.ontadev.libs.ioc.annotation.Command;
-import com.ontadev.libs.ioc.annotation.Priority;
+import com.ontadev.libs.ioc.annotation.stereotype.Command;
+import com.ontadev.libs.ioc.annotation.common.Priority;
 import com.ontadev.libs.ioc.handlers.ClassAnnotationHandler;
 import com.ontadev.libs.ioc.handlers.FieldAnnotationHandler;
 import com.ontadev.libs.ioc.handlers.MethodAnnotationHandler;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.annotation.Annotation;
@@ -312,11 +315,14 @@ public class IoCContainer {
     }
 
 
-    private record ComponentPriority(
-            int priority,
-            int annotationPriority,
-            Class<? extends Annotation> annotation
-    ){
+    @Accessors(fluent = true)
+    @Getter
+    @RequiredArgsConstructor
+    private static class ComponentPriority{
+        private final int priority;
+        private final int annotationPriority;
+        private final Class<? extends Annotation> annoration;
+
         private static ComponentPriority defaultPriority(){
             return new ComponentPriority(0, 0, Command.class);
         }

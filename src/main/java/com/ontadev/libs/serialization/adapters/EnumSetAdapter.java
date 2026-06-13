@@ -36,10 +36,10 @@ public class EnumSetAdapter implements JsonSerializer<EnumSet<?>>, JsonDeseriali
     }
 
     private Class<?> resolveEnumClass(Type typeOfT) {
-        if (typeOfT instanceof ParameterizedType pt) {
-            Type arg = pt.getActualTypeArguments()[0];
-            if (arg instanceof Class<?> cls) {
-                return cls;
+        if (typeOfT instanceof ParameterizedType) {
+            Type arg = ((ParameterizedType) typeOfT).getActualTypeArguments()[0];
+            if (arg instanceof Class<?>) {
+                return (Class<?>) arg;
             }
         }
         return null;

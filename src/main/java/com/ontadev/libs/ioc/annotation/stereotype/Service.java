@@ -2,7 +2,9 @@
 // Авторские права (c) 2026 OntaDev
 // Лицензия: MIT
 
-package com.ontadev.libs.ioc.annotation;
+package com.ontadev.libs.ioc.annotation.stereotype;
+
+import com.ontadev.libs.ioc.annotation.common.Priority;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -11,7 +13,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@Priority(priority = 102)
-public @interface Repository {
+@Priority(priority = 100)
+public @interface Service {
     int priority() default 0;
 }
