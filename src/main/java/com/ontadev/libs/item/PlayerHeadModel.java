@@ -15,7 +15,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.UUID;
 
 @Getter
@@ -30,7 +29,7 @@ public class PlayerHeadModel extends ItemModel {
     }
 
     /**
-     * Sets a Base64 player head texture.
+     * Устанавливает Base64-текстуру головы игрока.
      */
     public PlayerHeadModel texture(String base64) {
         this.base64Texture = base64;
@@ -39,7 +38,7 @@ public class PlayerHeadModel extends ItemModel {
     }
 
     /**
-     * Sets the head owner.
+     * Устанавливает владельца головы.
      */
     public PlayerHeadModel owner(OfflinePlayer owner) {
         this.owner = owner;
@@ -48,14 +47,14 @@ public class PlayerHeadModel extends ItemModel {
     }
 
     /**
-     * Sets the head owner by UUID.
+     * Устанавливает владельца головы по UUID.
      */
     public PlayerHeadModel owner(UUID uuid) {
         return owner(Bukkit.getOfflinePlayer(uuid));
     }
 
     /**
-     * Sets the head owner by player name.
+     * Устанавливает владельца головы по имени игрока.
      */
     @Deprecated
     public PlayerHeadModel owner(String name) {
