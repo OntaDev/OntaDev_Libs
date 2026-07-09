@@ -6,10 +6,7 @@ package com.ontadev.libs.item;
 
 import com.ontadev.libs.menu.enums.InteractionType;
 import com.ontadev.libs.message.Message;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -28,6 +25,7 @@ import java.util.function.BiConsumer;
 @Getter
 @Setter
 @AllArgsConstructor
+@NoArgsConstructor
 @Builder(toBuilder = true)
 public class ItemModel {
 
