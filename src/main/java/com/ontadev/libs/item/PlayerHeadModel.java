@@ -8,6 +8,7 @@ import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -19,6 +20,7 @@ import java.util.UUID;
 
 @Getter
 @Setter
+@SuperBuilder(toBuilder = true)
 public class PlayerHeadModel extends ItemModel {
 
     private String base64Texture;

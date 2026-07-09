@@ -7,6 +7,7 @@ package com.ontadev.libs.item;
 import com.ontadev.libs.menu.enums.InteractionType;
 import com.ontadev.libs.message.Message;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -26,7 +27,7 @@ import java.util.function.BiConsumer;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder(toBuilder = true)
+@SuperBuilder(toBuilder = true)
 public class ItemModel {
 
     /**
