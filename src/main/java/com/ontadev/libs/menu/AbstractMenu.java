@@ -47,7 +47,9 @@ public abstract class AbstractMenu {
 
     public abstract Message title(PlayerSnapshot snapshot);
 
-    public abstract InventoryType inventoryType();
+    public abstract int size();
+
+    public InventoryType inventoryType(){return  null;}
 
     /**
      * Предметы, общие для всех зрителей меню (границы, кнопки закрытия,
@@ -161,4 +163,5 @@ public abstract class AbstractMenu {
     public String id() {
         return getClass().getName();
     }
+
 }

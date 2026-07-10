@@ -186,7 +186,13 @@ public class MenuManagerImpl implements MenuManager, Listener {
 
     private void openInternalSync(AbstractMenu abstractMenu, Player player, PlayerSnapshot snapshot) {
         var titleComponent = abstractMenu.title(snapshot).getComponents().getFirst();
-        Inventory inventory = Bukkit.createInventory(null, abstractMenu.inventoryType(), titleComponent);
+        Inventory inventory;
+
+        if (abstractMenu.inventoryType() == null){
+            inventory = Bukkit.createInventory(null, abstractMenu.size(), titleComponent);
+        }else {
+            inventory = Bukkit.createInventory(null, abstractMenu.inventoryType(), titleComponent);
+        }
 
         MenuSession session = new MenuSession(abstractMenu, inventory, abstractMenu.resolveItems(snapshot), snapshot, player);
         renderSession(session);
