@@ -5,7 +5,6 @@
 package com.ontadev.libs.menu;
 
 import com.ontadev.libs.ioc.annotation.AutoListener;
-import com.ontadev.libs.ioc.annotation.stereotype.Service;
 import com.ontadev.libs.item.ItemModel;
 import com.ontadev.libs.menu.manager.MenuManager;
 import com.ontadev.libs.menu.task.MenuTask;
