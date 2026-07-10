@@ -221,6 +221,9 @@ public class IoCContainer {
 
         if (instance != null){
             instances.put(clazz, instance);
+
+            postConstruct(clazz, instance);
+
             return instance;
         }
 
