@@ -6,6 +6,7 @@ package com.ontadev.libs.item;
 
 import com.ontadev.libs.menu.enums.InteractionType;
 import com.ontadev.libs.message.Message;
+import com.ontadev.libs.util.interfaces.Copyable;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.bukkit.Material;
@@ -28,7 +29,7 @@ import java.util.function.BiConsumer;
 @AllArgsConstructor
 @NoArgsConstructor
 @SuperBuilder(toBuilder = true)
-public class ItemModel {
+public class ItemModel implements Copyable<ItemModel> {
 
     /**
      * Готовый ItemStack для использования вместо создания нового из {@link #material}.
