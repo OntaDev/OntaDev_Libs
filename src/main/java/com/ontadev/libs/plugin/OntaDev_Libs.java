@@ -29,8 +29,9 @@ public final class OntaDev_Libs extends OntaDev_Template {
 
 
     private void createDefaultMenuManager() {
-        playerResolver = new PlayerResolver(this);
-        defaultMenuManager = new MenuManagerImpl(this, playerResolver);
+        IoCContainer container = getPluginIoC().getContainer();
+        playerResolver = container.create(PlayerResolver.class);
+        defaultMenuManager = container.create(MenuManagerImpl.class);
     }
 
     @Override
