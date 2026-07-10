@@ -13,6 +13,7 @@ import com.ontadev.libs.menu.task.MenuTaskState;
 import com.ontadev.libs.player.PlayerResolver;
 import com.ontadev.libs.player.PlayerSnapshot;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -31,8 +32,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
+@Slf4j
 @AutoListener
-@Service
 public class MenuManagerImpl implements MenuManager, Listener {
     @Getter
     private long currentTick = 0L;
@@ -77,8 +78,7 @@ public class MenuManagerImpl implements MenuManager, Listener {
 
         runSyncAsync(menu::resolvedStaticItemStacks)
                 .exceptionally(ex -> {
-                    plugin.getLogger().log(Level.SEVERE,
-                            "Не удалось предварительно построить статичные предметы меню '" + id + "'", ex);
+                    log.error("Не удалось предварительно построить статичные предметы меню '{}'", id, ex);
                     return null;
                 });
     }
@@ -108,13 +108,11 @@ public class MenuManagerImpl implements MenuManager, Listener {
                         });
                     })
                     .exceptionally(ex -> {
-                        plugin.getLogger().log(Level.WARNING,
-                                "Не удалось открыть меню '" + abstractMenu.id() + "' для " + snapshot, ex);
+                        log.warn("Не удалось открыть меню '{}' для {}", abstractMenu.id(), snapshot, ex);
                         return null;
                     });
         } catch (Exception ex) {
-            plugin.getLogger().log(Level.WARNING,
-                    "Не удалось открыть меню '" + abstractMenu.id() + "' для " + snapshot, ex);
+            log.warn("Не удалось открыть меню '{}' для {}", abstractMenu.id(), snapshot, ex);
             return CompletableFuture.failedFuture(ex);
         }
     }
@@ -145,11 +143,11 @@ public class MenuManagerImpl implements MenuManager, Listener {
                         return runSyncAsync(player::closeInventory);
                     })
                     .exceptionally(ex -> {
-                        plugin.getLogger().log(Level.WARNING, "Не удалось закрыть меню для " + snapshot, ex);
+                        log.warn("Не удалось закрыть меню для {}", snapshot, ex);
                         return null;
                     });
         } catch (Exception ex) {
-            plugin.getLogger().log(Level.WARNING, "Не удалось закрыть меню для " + snapshot, ex);
+            log.warn("Не удалось закрыть меню для {}", snapshot, ex);
             return CompletableFuture.failedFuture(ex);
         }
     }
@@ -179,7 +177,7 @@ public class MenuManagerImpl implements MenuManager, Listener {
                     });
                 })
                 .exceptionally(ex -> {
-                    plugin.getLogger().log(Level.WARNING, "Не удалось обновить меню для " + snapshot, ex);
+                    log.warn("Не удалось обновить меню для {}", snapshot, ex);
                     return null;
                 });
     }
@@ -237,6 +235,7 @@ public class MenuManagerImpl implements MenuManager, Listener {
     public void onClick(InventoryClickEvent event) {
         MenuSession session = activeSessions.get(event.getWhoClicked().getUniqueId());
         if (session == null || event.getView().getTopInventory() != session.getInventory()) {
+            log.warn("session not found");
             return;
         }
 
@@ -312,8 +311,7 @@ public class MenuManagerImpl implements MenuManager, Listener {
                     return Optional.<UUID>empty();
                 })
                 .exceptionally(ex -> {
-                    plugin.getLogger().log(Level.WARNING,
-                            "Не удалось получить UUID для " + snapshot, ex);
+                    log.warn("Не удалось получить UUID для {}", snapshot, ex);
                     return Optional.empty();
                 });
     }
@@ -369,9 +367,9 @@ public class MenuManagerImpl implements MenuManager, Listener {
             try {
                 state.run(session);
             } catch (Exception ex) {
-                plugin.getLogger().log(
-                        Level.WARNING,
-                        "Ошибка выполнения MenuTask",
+                log.warn(
+                        "Ошибка выполнения MenuTask {}",
+                        state.getTask().getClass().getName(),
                         ex
                 );
             }
