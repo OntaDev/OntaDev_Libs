@@ -89,4 +89,14 @@ public class PlayerHeadModel extends ItemModel {
         item.setItemMeta(meta);
         return item;
     }
+
+    @Override
+    public PlayerHeadModel copy() {
+        PlayerHeadModel copy = (PlayerHeadModel) super.copy();
+
+        copy.setOwner(owner);
+        copy.setBase64Texture(base64Texture);
+
+        return copy;
+    }
 }
