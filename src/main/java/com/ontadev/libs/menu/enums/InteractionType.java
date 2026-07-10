@@ -1,3 +1,7 @@
+// OntaDev_Libs Plugin
+// Авторские права (c) 2026 OntaDev
+// Лицензия: MIT
+
 package com.ontadev.libs.menu.enums;
 
 import org.bukkit.event.inventory.ClickType;
@@ -19,7 +23,7 @@ public enum InteractionType {
     /** Перетаскивание предмета через несколько слотов (InventoryDragEvent). */
     DRAG,
 
-    /** Всё, что не описано выше (действия в креативе, будущие типы кликов и т.д.). */
+    /** Всё, что не описано выше (будущие типы кликов и т.д.). */
     UNKNOWN;
 
     /** Оба варианта с шифтом. */

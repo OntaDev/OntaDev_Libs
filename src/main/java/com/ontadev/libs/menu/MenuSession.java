@@ -1,34 +1,43 @@
-// PPFSS_Libs Plugin
+// OntaDev_Libs Plugin
 // Авторские права (c) 2026 OntaDev
 // Лицензия: MIT
 
 package com.ontadev.libs.menu;
 
 import com.ontadev.libs.item.ItemModel;
+import com.ontadev.libs.player.PlayerSnapshot;
 import lombok.Getter;
 import lombok.Setter;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 
 import java.util.Map;
 
 /**
- * Per-player, per-open-instance state for a {@link AbstractMenu}. Created in
- * {@link MenuManagerImpl#open} and discarded once the inventory closes.
+ * Состояние {@link AbstractMenu} для конкретного игрока и текущего сеанса открытия меню.
+ * Создается в {@link MenuManagerImpl#open} и удаляется после закрытия инвентаря.
  */
 @Getter
-final class MenuSession {
+public final class MenuSession {
 
     private final AbstractMenu abstractMenu;
     private final Inventory inventory;
+    private final PlayerSnapshot playerSnapshot;
+    private final Player player;
 
-    /** The currently rendered "slot -> ItemModel" map; replaced on each {@link MenuManagerImpl#refresh}. */
+    @Getter
     @Setter
+    private boolean closed;
+
+    /** Текущая карта отображения «слот -> ItemModel»; заменяется при каждом вызове {@link MenuManagerImpl#refresh}. */    @Setter
     private Map<Integer, ItemModel> items;
 
-    MenuSession(AbstractMenu abstractMenu, Inventory inventory, Map<Integer, ItemModel> items) {
+    MenuSession(AbstractMenu abstractMenu, Inventory inventory, Map<Integer, ItemModel> items, PlayerSnapshot playerSnapshot, Player player) {
         this.abstractMenu = abstractMenu;
         this.inventory = inventory;
         this.items = items;
+        this.playerSnapshot = playerSnapshot;
+        this.player = player;
     }
 
     ItemModel itemAt(int rawSlot) {

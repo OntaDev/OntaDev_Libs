@@ -1,4 +1,4 @@
-// PPFSS_Libs Plugin
+// OntaDev_Libs Plugin
 // Авторские права (c) 2026 OntaDev
 // Лицензия: MIT
 
@@ -16,16 +16,16 @@ import java.util.concurrent.CompletableFuture;
 public interface MenuManager {
 
     /**
-     * Registers a menu, wires it back to this manager, and pre-builds &
-     * caches its static {@link ItemStack}s on the main thread.
+     * Регистрирует меню, привязывает его к данному менеджеру, а также
+     * предварительно формирует и кэширует его статические {@link ItemStack} в главном потоке.
      */
     <T extends AbstractMenu> void registerMenu(T menu);
 
-    /** Returns a previously registered menu by its {@link AbstractMenu#id()}, or {@code null}. */
+    /** Возвращает ранее зарегистрированное меню по его {@link AbstractMenu#id()} или {@code null}. */
     AbstractMenu getMenu(String id);
 
     /**
-     * Opens the given menu for a player, rendering static + dynamic items.
+     * Открывает указанное меню для игрока, отображая статические и динамические предметы.
      *
      */
     CompletableFuture<Void> open(AbstractMenu abstractMenu, PlayerSnapshot snapshot);
@@ -33,26 +33,27 @@ public interface MenuManager {
     CompletableFuture<Void> open(AbstractMenu abstractMenu, Player player);
 
     /**
-     * Opens a registered menu by id. Throws {@link IllegalArgumentException} if unknown.
+     * Открывает зарегистрированное меню по его id.
+     * Выбрасывает {@link IllegalArgumentException}, если меню с таким id не найдено.
      *
      */
     CompletableFuture<Void> open(String menuId, PlayerSnapshot snapshot);
 
     /**
-     * Closes the player's currently open menu, if any.
+     * Закрывает текущее открытое меню игрока, если таковое имеется.
      *
      */
     CompletableFuture<Void> close(PlayerSnapshot snapshot);
 
     /**
-     * Returns the menu currently open for this player, if any.
+     * Возвращает меню, открытое в данный момент для этого игрока, если таковое имеется.
      */
     CompletableFuture<Optional<AbstractMenu>> activeMenu(PlayerSnapshot snapshot);
 
     /**
-     * Re-resolves {@link AbstractMenu#dynamicItems(PlayerSnapshot)} for the player's
-     * currently open menu and re-renders it in place (e.g. after a balance
-     * change). No-op if the player has no menu open.
+     * Повторно вычисляет {@link AbstractMenu#dynamicItems(PlayerSnapshot)} для текущего
+     * открытого меню игрока и обновляет его на месте (например, после изменения баланса).
+     * Не выполняет никаких действий, если у игрока не открыто ни одно меню.
      *
      */
     CompletableFuture<Void> refresh(PlayerSnapshot snapshot);

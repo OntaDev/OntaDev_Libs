@@ -1,4 +1,4 @@
-// PPFSS_Libs Plugin
+// OntaDev_Libs Plugin
 // Авторские права (c) 2026 OntaDev
 // Лицензия: MIT
 
@@ -8,9 +8,11 @@ import com.ontadev.libs.ioc.annotation.AutoListener;
 import com.ontadev.libs.ioc.annotation.stereotype.Service;
 import com.ontadev.libs.item.ItemModel;
 import com.ontadev.libs.menu.manager.MenuManager;
+import com.ontadev.libs.menu.task.MenuTask;
+import com.ontadev.libs.menu.task.MenuTaskState;
 import com.ontadev.libs.player.PlayerResolver;
 import com.ontadev.libs.player.PlayerSnapshot;
-import lombok.RequiredArgsConstructor;
+import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -24,25 +26,30 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.IllegalPluginAccessException;
 import org.bukkit.plugin.Plugin;
 
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 @AutoListener
 @Service
-@RequiredArgsConstructor
 public class MenuManagerImpl implements MenuManager, Listener {
+    @Getter
+    private long currentTick = 0L;
 
-    /** Внедряется IoC контейнером. Нужен для планирования синхронных задач через {@link Bukkit#getScheduler()}. */
+    private final PriorityQueue<MenuTaskState> queue = new PriorityQueue<>(Comparator.comparingLong(MenuTaskState::getNextRun));
+
+    /**
+     * Внедряется IoC контейнером. Нужен для планирования синхронных задач через {@link Bukkit#getScheduler()}.
+     */
     private final Plugin plugin;
     private final PlayerResolver playerResolver;
 
     private final Map<String, AbstractMenu> menus = new ConcurrentHashMap<>();
 
-    /** Ключ - UUID игрока. */
+    /**
+     * Ключ - UUID игрока.
+     */
     private final Map<UUID, MenuSession> activeSessions = new ConcurrentHashMap<>();
 
     /**
@@ -51,6 +58,13 @@ public class MenuManagerImpl implements MenuManager, Listener {
      * вызов отменяется внутри своей синхронной задачи.
      */
     private final Map<UUID, Long> openTickets = new ConcurrentHashMap<>();
+
+    public MenuManagerImpl(Plugin plugin, PlayerResolver playerResolver) {
+        this.plugin = plugin;
+        this.playerResolver = playerResolver;
+
+        Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 1L, 1L);
+    }
 
     @Override
     public <T extends AbstractMenu> void registerMenu(T menu) {
@@ -160,7 +174,7 @@ public class MenuManagerImpl implements MenuManager, Listener {
                     return runSyncAsync(() -> {
                         MenuSession session = activeSessions.get(uuid);
                         if (session != null) {
-                            renderSession(session, snapshot);
+                            renderSession(session);
                         }
                     });
                 })
@@ -174,17 +188,28 @@ public class MenuManagerImpl implements MenuManager, Listener {
         var titleComponent = abstractMenu.title(snapshot).getComponents().getFirst();
         Inventory inventory = Bukkit.createInventory(null, abstractMenu.inventoryType(), titleComponent);
 
-        MenuSession session = new MenuSession(abstractMenu, inventory, abstractMenu.resolveItems(snapshot));
-        renderSession(session, snapshot);
+        MenuSession session = new MenuSession(abstractMenu, inventory, abstractMenu.resolveItems(snapshot), snapshot, player);
+        renderSession(session);
 
         activeSessions.put(player.getUniqueId(), session);
+
+        abstractMenu.tasks().forEach(task -> queue.offer(new MenuTaskState(task, session, currentTick)));
+
+        if (abstractMenu.refreshPeriod() > 0) {
+            MenuTask task = MenuTask.every(abstractMenu.refreshPeriod(), s -> renderSession(session));
+            queue.offer(new MenuTaskState(task, session, currentTick));
+        }
+
         player.openInventory(inventory);
     }
 
-    /** Обновляет предметы в инвентаре сессии на основе динамических данных игрока. */
-    private void renderSession(MenuSession session, PlayerSnapshot snapshot) {
+    /**
+     * Обновляет предметы в инвентаре сессии на основе динамических данных игрока.
+     */
+    private void renderSession(MenuSession session) {
         AbstractMenu abstractMenu = session.getAbstractMenu();
         Inventory inventory = session.getInventory();
+        PlayerSnapshot snapshot = session.getPlayerSnapshot();
 
         Map<Integer, ItemModel> items = abstractMenu.resolveItems(snapshot);
         Map<Integer, ItemStack> staticStacks = abstractMenu.resolvedStaticItemStacks();
@@ -251,15 +276,20 @@ public class MenuManagerImpl implements MenuManager, Listener {
         MenuSession session = activeSessions.get(uuid);
 
         if (session != null && event.getView().getTopInventory() == session.getInventory()) {
+            session.setClosed(true);
             activeSessions.remove(uuid);
         }
     }
 
-    /** Защитная очистка на случай, если InventoryCloseEvent не сработал (например, при принудительном отключении). */
+    /**
+     * Защитная очистка на случай, если InventoryCloseEvent не сработал (например, при принудительном отключении).
+     */
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
-        activeSessions.remove(uuid);
+
+        MenuSession session = activeSessions.remove(uuid);
+        if (session != null) session.setClosed(true);
         openTickets.remove(uuid);
     }
 
@@ -312,5 +342,38 @@ public class MenuManagerImpl implements MenuManager, Listener {
         }
 
         return future;
+    }
+
+    private void tick() {
+        currentTick++;
+
+        MenuTaskState state;
+
+        while ((state = queue.peek()) != null &&
+                state.getNextRun() <= currentTick) {
+
+            queue.poll();
+
+            MenuSession session = state.getSession();
+
+            if (session.isClosed()) {
+                continue;
+            }
+
+            try {
+                state.run(session);
+            } catch (Exception ex) {
+                plugin.getLogger().log(
+                        Level.WARNING,
+                        "Ошибка выполнения MenuTask",
+                        ex
+                );
+            }
+
+            if (state.getTask().getPeriod() > 0) {
+                state.scheduleNext();
+                queue.offer(state);
+            }
+        }
     }
 }

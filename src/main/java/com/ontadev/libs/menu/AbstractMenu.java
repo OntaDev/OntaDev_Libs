@@ -1,4 +1,4 @@
-// PPFSS_Libs Plugin
+// OntaDev_Libs Plugin
 // Авторские права (c) 2026 OntaDev
 // Лицензия: MIT
 
@@ -6,6 +6,7 @@ package com.ontadev.libs.menu;
 
 import com.ontadev.libs.item.ItemModel;
 import com.ontadev.libs.menu.manager.MenuManager;
+import com.ontadev.libs.menu.task.MenuTask;
 import com.ontadev.libs.message.Message;
 import com.ontadev.libs.player.PlayerSnapshot;
 import lombok.Getter;
@@ -14,6 +15,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -138,6 +140,22 @@ public abstract class AbstractMenu {
             );
         }
         return menuManager;
+    }
+
+    /**
+     * Период автоматического обновления dynamicItems().
+     * <= 0 — обновление отключено.
+     */
+    public long refreshPeriod() {
+        return -1L;
+    }
+
+    /**
+     * Дополнительные задачи, запускаемые при открытии меню.
+     * Все задачи автоматически отменяются при закрытии меню.
+     */
+    public Collection<MenuTask> tasks() {
+        return Collections.emptyList();
     }
 
     public String id() {
