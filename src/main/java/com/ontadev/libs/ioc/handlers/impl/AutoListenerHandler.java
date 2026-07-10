@@ -5,7 +5,6 @@
 package com.ontadev.libs.ioc.handlers.impl;
 
 import com.ontadev.libs.ioc.IoCContainer;
-import com.ontadev.libs.ioc.PluginIoC;
 import com.ontadev.libs.ioc.annotation.AutoListener;
 import com.ontadev.libs.ioc.handlers.ClassAnnotationHandler;
 import lombok.extern.slf4j.Slf4j;
