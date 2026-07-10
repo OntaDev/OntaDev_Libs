@@ -176,4 +176,14 @@ public class ItemModel {
     private static int clampAmount(int amount) {
         return Math.max(Math.min(amount, 64), 1);
     }
+
+    public ItemModel copy() {
+        ItemModel copy = this.toBuilder().build();
+
+        copy.baseItem = baseItem == null ? null : baseItem.clone();
+        copy.itemFlags = EnumSet.copyOf(itemFlags);
+        copy.interactionHandlers = new EnumMap<>(interactionHandlers);
+
+        return copy;
+    }
 }
