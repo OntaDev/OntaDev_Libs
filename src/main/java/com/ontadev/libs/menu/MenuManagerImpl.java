@@ -29,7 +29,6 @@ import org.bukkit.plugin.Plugin;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
 
 @Slf4j
 @AutoListener
