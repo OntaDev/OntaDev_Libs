@@ -19,11 +19,9 @@ import java.lang.reflect.Method;
 @Slf4j
 public class AutoListenerHandler implements ClassAnnotationHandler<AutoListener> {
     private final JavaPlugin plugin;
-    private final PluginIoC pluginIoC;
 
-    public AutoListenerHandler(JavaPlugin plugin, PluginIoC pluginIoC) {
+    public AutoListenerHandler(JavaPlugin plugin) {
         this.plugin = plugin;
-        this.pluginIoC = pluginIoC;
     }
 
     @Override
@@ -41,6 +39,7 @@ public class AutoListenerHandler implements ClassAnnotationHandler<AutoListener>
         if (!hasSubscribeMethods(clazz)) {
             log.warn("Class {} marked as @Listener but has no @Subscribe methods", clazz.getName());
         }
+
     }
 
     private boolean hasSubscribeMethods(Class<?> clazz) {
@@ -54,10 +53,7 @@ public class AutoListenerHandler implements ClassAnnotationHandler<AutoListener>
 
     @Override
     public void postCreate(IoCContainer container, Object instance, AutoListener annotation) {
-        pluginIoC.getOnEnable().add(()->{
-            Bukkit.getPluginManager().registerEvents((Listener) instance, plugin);
-
-            log.info("Registered listener: {}", instance.getClass().getName());
-        });
+        Bukkit.getPluginManager().registerEvents((Listener) instance, plugin);
+        log.info("Registered listener: {}", instance.getClass().getName());
     }
 }
