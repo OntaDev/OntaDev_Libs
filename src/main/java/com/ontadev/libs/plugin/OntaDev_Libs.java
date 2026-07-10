@@ -3,6 +3,7 @@
 // Лицензия: MIT
 package com.ontadev.libs.plugin;
 
+import com.ontadev.libs.ioc.IoCContainer;
 import com.ontadev.libs.ioc.PluginIoC;
 import com.ontadev.libs.menu.MenuManagerImpl;
 import com.ontadev.libs.menu.manager.MenuManager;
@@ -22,11 +23,16 @@ public final class OntaDev_Libs extends OntaDev_Template {
     public void onLoad() {
         Message.load(this);
 
-        createDefaultMenuManager();
-
         super.onLoad();
     }
 
+    @Override
+    public void onEnable() {
+        createDefaultMenuManager();
+        registerMenuManager();
+
+        super.onEnable();
+    }
 
     private void createDefaultMenuManager() {
         IoCContainer container = getPluginIoC().getContainer();

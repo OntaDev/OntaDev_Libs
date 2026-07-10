@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 public abstract class OntaDev_Template extends JavaPlugin {
 
     @Getter
-    private static PluginIoC pluginIoC;
+    private PluginIoC pluginIoC;
 
     protected static Logger log;
 
