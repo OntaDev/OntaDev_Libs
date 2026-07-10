@@ -34,6 +34,11 @@ public final class OntaDev_Libs extends OntaDev_Template {
         defaultMenuManager = container.create(MenuManagerImpl.class);
     }
 
+    private void registerMenuManager(){
+        PluginIoC ioc = getPluginIoC();
+        ioc.registerInstance(MenuManager.class, defaultMenuManager);
+    }
+
     @Override
     public void onPluginEnable(PluginIoC pluginIoC) {
         log.info("[OntaDevLibs] Enabled");
