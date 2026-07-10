@@ -7,9 +7,7 @@ package com.ontadev.libs.ioc;
 import com.ontadev.libs.config.YamlConfigLoader;
 import com.ontadev.libs.ioc.handlers.impl.*;
 import com.ontadev.libs.menu.manager.MenuManager;
-import com.ontadev.libs.menu.MenuManagerImpl;
 import com.ontadev.libs.message.Message;
-import com.ontadev.libs.player.PlayerResolver;
 import com.ontadev.libs.serialization.GsonAdapter;
 import com.ontadev.libs.serialization.adapters.ComponentAdapter;
 import com.ontadev.libs.serialization.adapters.EnumSetAdapter;
@@ -67,14 +65,12 @@ public class PluginIoC {
 
         configLoader = loadConfigLoader(classes);
 
-        registerMenuManager();
-
         registerDefaultHandlers();
 
         tempClasses = classes;
     }
 
-    public void initializeContainer(){
+    public void initializeContainer() {
         if (tempClasses == null) return;
 
         container.initialize(tempClasses);
@@ -82,7 +78,7 @@ public class PluginIoC {
         tempClasses = null;
     }
 
-    private void registerDefaultInstance(JavaPlugin plugin){
+    private void registerDefaultInstance(JavaPlugin plugin) {
         registerPluginInstance(plugin);
 
         registerInstance(JavaPlugin.class, plugin);
@@ -92,19 +88,8 @@ public class PluginIoC {
         registerInstance(PluginIoC.class, this);
     }
 
-    private void registerMenuManager(){
-        PlayerResolver playerResolver = new PlayerResolver(plugin);
 
-        registerInstance(PlayerResolver.class, playerResolver);
-
-        menuManager = new MenuManagerImpl(plugin, playerResolver);
-
-        registerInstance(PlayerResolver.class, playerResolver);
-        registerInstance(MenuManager.class, menuManager);
-        registerInstance(MenuManagerImpl.class, (MenuManagerImpl) menuManager);
-    }
-
-    private YamlConfigLoader loadConfigLoader(Set<Class<?>> classes){
+    private YamlConfigLoader loadConfigLoader(Set<Class<?>> classes) {
         Map<Class<?>, Object> adapters = scanForAdapters(classes);
 
         registerDefaultAdapters(adapters, container);
@@ -112,7 +97,7 @@ public class PluginIoC {
         return createConfigLoader(adapters);
     }
 
-    private YamlConfigLoader createConfigLoader(Map<Class<?>, Object> adapters){
+    private YamlConfigLoader createConfigLoader(Map<Class<?>, Object> adapters) {
         YamlConfigLoader loader = new YamlConfigLoader(plugin.getDataFolder().toPath(), adapters);
 
         registerInstance(YamlConfigLoader.class, loader);
@@ -120,7 +105,7 @@ public class PluginIoC {
         return loader;
     }
 
-    private Map<Class<?>, Object> scanForAdapters(Set<Class<?>> classes){
+    private Map<Class<?>, Object> scanForAdapters(Set<Class<?>> classes) {
         Map<Class<?>, Object> adapters = new HashMap<>();
 
         for (Class<?> clazz : classes) {
@@ -179,7 +164,7 @@ public class PluginIoC {
         container.registerClassHandler(new ComponentHandler());
         container.registerClassHandler(new ServiceHandler());
         container.registerClassHandler(new CommandHandler(plugin));
-        container.registerClassHandler(new AutoListenerHandler(plugin, this));
+        container.registerClassHandler(new AutoListenerHandler(plugin));
         container.registerClassHandler(new MenuHandler(menuManager));
 
 
