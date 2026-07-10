@@ -5,12 +5,12 @@
 package com.ontadev.libs.menu.task;
 
 import com.ontadev.libs.menu.MenuSession;
-import com.ontadev.libs.player.PlayerSnapshot;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import java.util.function.Consumer;
 
+@SuppressWarnings("unused")
 @Getter
 @RequiredArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class MenuTask {

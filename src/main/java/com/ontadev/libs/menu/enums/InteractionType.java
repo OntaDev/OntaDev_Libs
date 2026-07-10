@@ -6,6 +6,7 @@ package com.ontadev.libs.menu.enums;
 
 import org.bukkit.event.inventory.ClickType;
 
+@SuppressWarnings("unused")
 public enum InteractionType {
 
     LEFT_CLICK,
