@@ -8,6 +8,7 @@ import com.ontadev.libs.item.ItemModel;
 import com.ontadev.libs.menu.manager.MenuManager;
 import com.ontadev.libs.menu.task.MenuTask;
 import com.ontadev.libs.message.Message;
+import com.ontadev.libs.message.Placeholders;
 import com.ontadev.libs.player.PlayerSnapshot;
 import lombok.Getter;
 import lombok.Setter;
@@ -102,6 +103,14 @@ public abstract class AbstractMenu {
         }
 
         return resolved;
+    }
+
+    public Placeholders staticPlaceholders(){
+        return null;
+    }
+
+    public Placeholders dynamicPlaceholders(PlayerSnapshot playerSnapshot){
+        return null;
     }
 
     /**

@@ -181,7 +181,7 @@ public class MenuManagerImpl implements MenuManager, Listener {
     }
 
     private void openInternalSync(AbstractMenu abstractMenu, Player player, PlayerSnapshot snapshot) {
-        var titleComponent = abstractMenu.title(snapshot).getComponents().getFirst();
+        var titleComponent = abstractMenu.title(snapshot).getComponents().get(0);
         Inventory inventory;
 
         if (abstractMenu.inventoryType() == null){

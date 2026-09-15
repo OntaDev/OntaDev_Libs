@@ -1,4 +1,4 @@
-// PPFSS_Libs Plugin
+// OntaDev_Libs Plugin
 // Авторские права (c) 2026 OntaDev
 // Лицензия: MIT
 

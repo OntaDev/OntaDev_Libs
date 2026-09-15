@@ -30,6 +30,8 @@ public final class AnnotationScanner {
                 .ignoreParentClassLoaders()
 
                 .rejectPackages(
+                        "com.ontadev.libs.ioc.*",
+
                         "org.bukkit",
                         "net.minecraft",
                         "com.mojang",

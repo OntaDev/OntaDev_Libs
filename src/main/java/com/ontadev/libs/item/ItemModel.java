@@ -1,4 +1,4 @@
-// PPFSS_Libs Plugin
+// OntaDev_Libs Plugin
 // Авторские права (c) 2026 OntaDev
 // Лицензия: MIT
 
@@ -148,7 +148,7 @@ public class ItemModel implements Copyable<ItemModel> {
         }
 
         if (name != null && !name.getComponents().isEmpty()) {
-            meta.displayName(name.getComponents().getFirst());
+            meta.displayName(name.getComponents().get(0));
         }
 
         if (lore != null && !lore.getComponents().isEmpty()) {
