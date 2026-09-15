@@ -1,5 +1,5 @@
-// PPFS_Libs Plugin
-// Авторские права (c) 2024 OntaDev
+// OntaDev_Libs Plugin
+// Авторские права (c) 2026 OntaDev
 // Лицензия: MIT
 
 package com.ontadev.libs.message;
@@ -24,7 +24,7 @@ public class Placeholders {
     }
 
     public static Placeholders of(String key, String... values) {
-        return new Placeholders().add(key, values);
+        return new Placeholders().add(key, (Object) values);
     }
 
     public static Placeholders of() {

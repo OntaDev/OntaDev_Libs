@@ -1,5 +1,5 @@
 // OntaDev_Libs Plugin
-// Авторские права (c) 2025 OntaDev
+// Авторские права (c) 2026 OntaDev
 // Лицензия: MIT
 
 package com.ontadev.libs.message;
@@ -7,9 +7,6 @@ package com.ontadev.libs.message;
 import lombok.Getter;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -17,8 +14,12 @@ import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
+import static com.ontadev.libs.message.MessageDispatcher.runOnMain;
+import static com.ontadev.libs.message.MessageParser.LEGACY;
+import static com.ontadev.libs.message.MessageParser.PLAIN;
+import static com.ontadev.libs.message.MessageParser.parse;
+import static com.ontadev.libs.message.MessageParser.stripColorTags;
 
 /**
  * Не потокобезопасен для конкурентной мутации (add/clear) во время send.
@@ -28,46 +29,28 @@ import java.util.regex.Pattern;
 @SuppressWarnings("unused")
 public class Message {
 
-    private static Plugin staticPlugin;
-    private static final MiniMessage MINI_MESSAGE = MiniMessage.builder().strict(false).build();
-    private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
-    private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacyAmpersand();
-    private static final Pattern LEGACY_TAG_PATTERN = Pattern.compile("</?&([\\p{L}\\p{Nd}_]+)>", Pattern.CASE_INSENSITIVE);
-
-    public static void load(Plugin plugin) {
-        Message.staticPlugin = plugin;
+    public static void load(@NotNull Plugin plugin) {
+        MessageDispatcher.load(plugin);
     }
 
-    private final Plugin plugin;
     private final List<String> rawMessage = new ArrayList<>();
-
-
     private volatile List<Component> parsedCache;
 
     public Message() {
-        this.plugin = staticPlugin;
     }
 
     public Message(@NotNull String... messages) {
-        this();
         Collections.addAll(rawMessage, messages);
     }
 
     public Message(@NotNull List<String> messages) {
-        this();
         rawMessage.addAll(messages);
     }
 
     public Message(@NotNull Component... components) {
-        this();
         for (Component component : components) {
             rawMessage.add(PLAIN.serialize(component));
         }
-    }
-
-    public Message(@NotNull Plugin plugin, @NotNull String... messages) {
-        this.plugin = plugin;
-        Collections.addAll(rawMessage, messages);
     }
 
     public void add(@NotNull String message) {
@@ -94,9 +77,9 @@ public class Message {
         parsedCache = null;
     }
 
-    // 
+    //
     // Отправка сообщений
-    // 
+    //
 
     public void send(UUID uuid) {
         runOnMain(() -> {
@@ -113,8 +96,7 @@ public class Message {
     public void send(CommandSender sender) {
         if (sender == null) return;
         if (sender instanceof Player) {
-            Player player = (Player) sender;
-            send(player);
+            send((Player) sender);
             return;
         }
         runOnMain(() -> sendSync(sender));
@@ -128,8 +110,7 @@ public class Message {
     public void send(CommandSender sender, @NotNull Placeholders placeholders) {
         if (sender == null) return;
         if (sender instanceof Player) {
-            Player player = (Player) sender;
-            send(player, placeholders);
+            send((Player) sender, placeholders);
             return;
         }
         runOnMain(() -> sendSync(sender, placeholders));
@@ -153,9 +134,9 @@ public class Message {
         });
     }
 
-    // 
+    //
     // Внутренние методы
-    // 
+    //
 
     private void sendSync(Player player) {
         for (Component component : getParsedCached()) {
@@ -185,19 +166,11 @@ public class Message {
         }
     }
 
-    private void runOnMain(Runnable task) {
-        if (Bukkit.isPrimaryThread()) {
-            task.run();
-        } else {
-            Bukkit.getScheduler().runTask(plugin, task);
-        }
-    }
-
-    // 
+    //
     // Геттеры
-    // 
+    //
 
-    /** Первая стока без ЛЮБЫХ плейсхолдеров */
+    /** Первая строка без ЛЮБЫХ плейсхолдеров */
     public String getFirstStringClean() {
         if (rawMessage.isEmpty()) return null;
         return stripColorTags(rawMessage.get(0));
@@ -217,12 +190,18 @@ public class Message {
         return PLAIN.serialize(parse(expanded.get(0)));
     }
 
-    private static final Pattern MINIMESSAGE_TAG_PATTERN = Pattern.compile("</?[a-zA-Z0-9_:#]+(:[^>]*)?>");
-    private static final Pattern LEGACY_COLOR_PATTERN = Pattern.compile("&[0-9a-fk-orA-FK-OR]");
+    /** Первая строка, полностью обработанная парсером, как Component, без плейсхолдеров. */
+    public Component getFirstComponentParsed() {
+        if (rawMessage.isEmpty()) return null;
+        return parse(rawMessage.get(0));
+    }
 
-    private String stripColorTags(@NotNull String input) {
-        String noLegacy = LEGACY_COLOR_PATTERN.matcher(input).replaceAll("");
-        return MINIMESSAGE_TAG_PATTERN.matcher(noLegacy).replaceAll("");
+    /** Первая строка, полностью обработанная парсером, как Component, с подстановкой плейсхолдеров. */
+    public Component getFirstComponentParsed(@NotNull Placeholders placeholders) {
+        if (rawMessage.isEmpty()) return null;
+        List<String> expanded = placeholders.apply(rawMessage.get(0));
+        if (expanded.isEmpty()) return null;
+        return parse(expanded.get(0));
     }
 
     public List<String> getText() {
@@ -270,27 +249,5 @@ public class Message {
     @Override
     public String toString() {
         return String.join("\n", rawMessage);
-    }
-
-    //
-    // Парсинг 
-    //
-
-    private @NotNull Component parse(@NotNull String message) {
-        String normalized = normalizeLegacyTags(message);
-        Component legacy = LEGACY.deserialize(normalized);
-        return MINI_MESSAGE.deserialize(normalized).mergeStyle(legacy);
-    }
-
-    private String normalizeLegacyTags(@NotNull String input) {
-        Matcher matcher = LEGACY_TAG_PATTERN.matcher(input);
-        StringBuilder buffer = new StringBuilder();
-        while (matcher.find()) {
-            String tag = matcher.group(1).toLowerCase(Locale.ROOT);
-            String replacement = matcher.group().startsWith("</") ? "</" + tag + ">" : "<" + tag + ">";
-            matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacement));
-        }
-        matcher.appendTail(buffer);
-        return buffer.toString();
     }
 }
