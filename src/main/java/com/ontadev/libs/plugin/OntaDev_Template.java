@@ -7,6 +7,7 @@ package com.ontadev.libs.plugin;
 import com.ontadev.libs.ioc.PluginIoC;
 import com.ontadev.libs.menu.MenuManagerImpl;
 import com.ontadev.libs.menu.manager.MenuManager;
+import com.ontadev.libs.orm.database.DatabaseManager;
 import com.ontadev.libs.player.PlayerResolver;
 import lombok.Getter;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -35,6 +36,9 @@ public abstract class OntaDev_Template extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        if (OntaDev_Libs.databaseManager != null)
+            getPluginIoC().registerInstance(DatabaseManager.class, OntaDev_Libs.databaseManager);
+
         preInitializeContainer(pluginIoC);
 
         initializeContainer(pluginIoC);

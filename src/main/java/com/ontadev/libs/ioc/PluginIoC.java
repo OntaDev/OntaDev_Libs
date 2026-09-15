@@ -4,10 +4,19 @@
 
 package com.ontadev.libs.ioc;
 
+import com.ontadev.libs.config.SettingsConfig;
 import com.ontadev.libs.config.YamlConfigLoader;
 import com.ontadev.libs.ioc.handlers.impl.*;
 import com.ontadev.libs.menu.manager.MenuManager;
 import com.ontadev.libs.message.Message;
+import com.ontadev.libs.orm.mapper.EntityMapper;
+import com.ontadev.libs.orm.OrmRepositoryHandler;
+import com.ontadev.libs.orm.adapter.EntityRowMapperFactory;
+import com.ontadev.libs.orm.adapter.JsonTypeAdapter;
+import com.ontadev.libs.orm.adapter.UuidTypeAdapter;
+import com.ontadev.libs.orm.database.DatabaseManager;
+import com.ontadev.libs.orm.database.Dialect;
+import com.ontadev.libs.orm.entity.SchemaGenerator;
 import com.ontadev.libs.serialization.GsonAdapter;
 import com.ontadev.libs.serialization.adapters.ComponentAdapter;
 import com.ontadev.libs.serialization.adapters.EnumSetAdapter;
@@ -19,6 +28,7 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Server;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jdbi.v3.core.Jdbi;
 
 import java.lang.reflect.Modifier;
 import java.util.*;
@@ -68,6 +78,32 @@ public class PluginIoC {
         registerDefaultHandlers();
 
         tempClasses = classes;
+    }
+
+    private void registerOrm(){
+        SettingsConfig config = this.configLoader.loadFromClass(SettingsConfig.class);
+
+        container.registerInstance(SettingsConfig.class, config);
+
+        DatabaseManager databaseManager = new DatabaseManager(config);
+
+        container.registerInstance(DatabaseManager.class, databaseManager);
+        container.registerInstance(Jdbi.class, databaseManager.getJdbi());
+        container.registerInstance(Dialect.class, databaseManager.getDialect());
+
+        new UuidTypeAdapter().registerOn(databaseManager.getJdbi());
+        new JsonTypeAdapter().registerOn(databaseManager.getJdbi());
+
+        EntityMapper entityMapper = new EntityMapper(databaseManager.getDialect());
+        container.registerInstance(EntityMapper.class, entityMapper);
+
+        SchemaGenerator generator = new SchemaGenerator(databaseManager, entityMapper);
+        container.registerInstance(SchemaGenerator.class, generator);
+
+        EntityRowMapperFactory entityRowMapperFactory = new EntityRowMapperFactory(entityMapper);
+        databaseManager.getJdbi().registerRowMapper(entityRowMapperFactory);
+
+        container.registerInterfaceHandler(new OrmRepositoryHandler());
     }
 
     public void initializeContainer() {
