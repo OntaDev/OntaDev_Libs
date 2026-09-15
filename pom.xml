@@ -230,6 +230,15 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- slf4j-api (через paper-api, provided) в тестах без биндинга даёт NOP-логгер и предупреждение;
+             в реальном Paper-сервере логирование подключает сам сервер, поэтому биндинг нужен только для тестов -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.7.36</version>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Живой Postgres в тестах без Docker: качает нативный бинарник под текущую ОС и поднимает как обычный процесс -->
         <dependency>
             <groupId>io.zonky.test</groupId>
