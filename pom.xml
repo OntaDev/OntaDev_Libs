@@ -54,6 +54,7 @@
                             <artifact>*:*</artifact>
                             <excludes>
                                 <exclude>module-info.class</exclude>
+                                <exclude>**/module-info.class</exclude>
                                 <exclude>META-INF/*.SF</exclude>
                                 <exclude>META-INF/*.DSA</exclude>
                                 <exclude>META-INF/*.RSA</exclude>
@@ -71,6 +72,12 @@
                             <shadedPattern>com.ontadev.libs.shaded.bstats</shadedPattern>
                         </relocation>
                     </relocations>
+                    <!-- Без этого при коллизии META-INF/services/java.sql.Driver (h2/mysql/postgresql/sqlite-jdbc
+                         все регистрируют себя этим файлом) shade оставляет только один драйвер вместо слияния,
+                         и в собранном jar-е DriverManager не находит остальные три диалекта -->
+                    <transformers>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                    </transformers>
                 </configuration>
             </plugin>
             <plugin>
