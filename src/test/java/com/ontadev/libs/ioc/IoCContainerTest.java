@@ -72,6 +72,61 @@ public class IoCContainerTest {
     }
 
     /*
+     * @Inject — выбор конструктора и полевая инъекция (без Provider<T>)
+     */
+
+    public static class PlainDependency {
+        String value() {
+            return "plain";
+        }
+    }
+
+    @Service
+    public static class PlainFieldInjectionHost {
+        @Inject
+        PlainDependency dependency;
+    }
+
+    public static class MultiConstructor {
+        final String source;
+        final PlainDependency dependency;
+
+        public MultiConstructor() {
+            this.source = "no-arg";
+            this.dependency = null;
+        }
+
+        @Inject
+        public MultiConstructor(PlainDependency dependency) {
+            this.source = "annotated";
+            this.dependency = dependency;
+        }
+    }
+
+    @Test
+    void shouldInjectPlainFieldDependency() {
+        IoCContainer container = newContainer();
+        container.registerFieldHandler(new InjectFieldHandler());
+
+        container.initialize(Set.of(PlainFieldInjectionHost.class));
+
+        PlainFieldInjectionHost host = container.get(PlainFieldInjectionHost.class);
+
+        Assertions.assertNotNull(host.dependency);
+        Assertions.assertEquals("plain", host.dependency.value());
+    }
+
+    @Test
+    void shouldUseInjectAnnotatedConstructorWhenMultiplePresent() {
+        IoCContainer container = newContainer();
+
+        MultiConstructor instance = container.create(MultiConstructor.class);
+
+        Assertions.assertEquals("annotated", instance.source);
+        Assertions.assertNotNull(instance.dependency);
+    }
+
+    /*
      * Provider<T> — lazy load
      */
 
@@ -136,8 +191,6 @@ public class IoCContainerTest {
     void shouldNotCreateFalseCyclicDependencyWhenOneSideIsLazy() {
         IoCContainer container = newContainer();
 
-        // Без Provider<LazyB> у EagerA это была бы настоящая цикличная зависимость
-        // (EagerA -> LazyB -> EagerA) и initialize() бросил бы IllegalStateException.
         Assertions.assertDoesNotThrow(() -> container.initialize(Set.of(EagerA.class, LazyB.class)));
 
         EagerA eagerA = container.get(EagerA.class);
