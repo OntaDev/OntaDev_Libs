@@ -87,6 +87,7 @@ public class IoCContainerTest {
         PlainDependency dependency;
     }
 
+    @SuppressWarnings("unused")
     public static class MultiConstructor {
         final String source;
         final PlainDependency dependency;
