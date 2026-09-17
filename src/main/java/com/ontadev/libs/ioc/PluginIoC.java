@@ -80,6 +80,26 @@ public class PluginIoC {
         tempClasses = classes;
     }
 
+    /**
+     * То же самое, что {@link #PluginIoC(JavaPlugin)}, но без {@link AnnotationScanner#scanPlugin}:
+     * набор классов передаётся готовым. Нужен для сценариев, где классы плагина
+     * не могут быть найдены обычным сканированием classpath'а - сам источник набора вне зоны
+     * ответственности этой библиотеки, она лишь принимает готовый результат.
+     */
+    public PluginIoC(JavaPlugin plugin, Set<Class<?>> classes) {
+        this.plugin = plugin;
+
+        registerDefaultInstance(plugin);
+
+        shutdownHandler = new ShutdownHandler();
+
+        configLoader = loadConfigLoader(classes);
+
+        registerDefaultHandlers();
+
+        tempClasses = classes;
+    }
+
     private void registerOrm(){
         SettingsConfig config = this.configLoader.loadFromClass(SettingsConfig.class);
 

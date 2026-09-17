@@ -6,7 +6,7 @@
 
     <groupId>com.ontadev</groupId>
     <artifactId>libs</artifactId>
-    <version>0.1.2</version>
+    <version>0.2.2</version>
     <packaging>jar</packaging>
 
     <name>OntaDev_Libs</name>
