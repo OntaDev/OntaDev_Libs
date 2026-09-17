@@ -25,7 +25,7 @@ public class InjectFieldHandler implements FieldAnnotationHandler<Inject> {
             Inject annotation
     ) {
 
-        Object dependency = container.get(field.getType());
+        Object dependency = container.resolveDependency(field.getGenericType());
 
         try {
 
