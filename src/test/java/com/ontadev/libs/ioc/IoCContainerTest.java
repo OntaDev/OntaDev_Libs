@@ -189,6 +189,24 @@ public class IoCContainerTest {
     }
 
     @Test
+    void shouldConstructProviderTargetOnlyOnceAcrossMultipleGetCalls() {
+        IoCContainer container = newContainer();
+        Dependency.constructedCount = 0;
+
+        WithProviderConstructorParam host = container.create(WithProviderConstructorParam.class);
+
+        Assertions.assertEquals(0, Dependency.constructedCount,
+                "Provider не должен создавать X до первого .get()");
+
+        Dependency first = host.provider.get();
+        Dependency second = host.provider.get();
+
+        Assertions.assertEquals(1, Dependency.constructedCount,
+                "повторный .get() не должен пересоздавать X");
+        Assertions.assertSame(first, second);
+    }
+
+    @Test
     void shouldNotCreateFalseCyclicDependencyWhenOneSideIsLazy() {
         IoCContainer container = newContainer();
 
