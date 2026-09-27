@@ -33,8 +33,7 @@ public abstract class AbstractCommand extends Command {
         }
 
         this.setName(getName());
-
-        List<String> aliases = new ArrayList<>();
+        this.setAliases(getAliases());
 
         Bukkit.getCommandMap().register(plugin.getName(), this);
     }
