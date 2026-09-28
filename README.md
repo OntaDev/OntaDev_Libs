@@ -62,7 +62,17 @@ public final class MyPlugin extends OntaDev_Template {
 | `@Config` | класс настроек, автоматически загружается через `YamlConfigLoader` перед созданием |
 | `@Command` | наследник `AbstractCommand`, автоматически регистрируется в Bukkit |
 | `@Menu` | наследник `AbstractMenu`, автоматически регистрируется в `MenuManager` |
-| `@AutoListener` | наследник `Listener`, автоматически регистрируется через `Bukkit.getPluginManager()` |
+
+`@AutoListener` в этот список не входит - в отличие от остальных, сама по себе она **не создаёт бин**. Это наследник `Listener`, который автоматически регистрируется через `Bukkit.getPluginManager()`, но только когда контейнер и так создаёт экземпляр класса - `AutoListenerHandler` не вызывает `registerComponent`, а лишь навешивает регистрацию слушателя на `postCreate`. Класс, помеченный только `@AutoListener`, контейнер не инстанцирует и слушатель зарегистрирован не будет - добавляйте `@AutoListener` вместе с одним из стереотипов выше (обычно `@Component` или `@Service`):
+
+```java
+@Component
+@AutoListener
+public class JoinListener implements Listener {
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) { }
+}
+```
 
 ```java
 @Service
@@ -333,5 +343,3 @@ mvn clean package
 ```
 
 Собирает shaded jar (`maven-shade-plugin`) со всеми зависимостями, кроме `provided` (Paper API, Adventure, LuckPerms - их даёт сервер). Тесты гоняются на реальных H2, SQLite и, если доступны без Docker, embedded Postgres/MariaDB - при недоступности движка на текущей платформе такие тесты сами помечаются skipped, а не валят сборку.
-
-CI: `.github/workflows/build.yml`, self-hosted раннер, JDK 17. При пуше в `master` собранный jar публикуется в GitHub Releases под версией из `pom.xml`.
