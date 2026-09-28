@@ -5,7 +5,8 @@
 package com.ontadev.libs.orm.database;
 
 import com.ontadev.libs.config.SettingsConfig;
-import com.ontadev.libs.ioc.IoCContainer;
+import com.ontadev.libs.orm.adapter.JsonTypeAdapter;
+import com.ontadev.libs.orm.adapter.UuidTypeAdapter;
 import com.ontadev.libs.orm.dto.DatabaseSettings;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -28,6 +29,8 @@ public final class DatabaseManager {
     public DatabaseManager(SettingsConfig settingsConfig) {
         DatabaseSettings config = settingsConfig.getDatabaseSettings();
 
+        applySqliteFallback(config);
+
         HikariConfig hikariConfig = getHikariConfig(config);
 
         this.dataSource = new HikariDataSource(hikariConfig);
@@ -35,7 +38,22 @@ public final class DatabaseManager {
 
         this.jdbi = Jdbi.create(dataSource);
 
+        new UuidTypeAdapter().registerOn(jdbi);
+        new JsonTypeAdapter().registerOn(jdbi);
+
         log.info("DatabaseManager инициализирован: {} (диалект: {})", config.getUrl(), dialect);
+    }
+
+    /**
+     * Если URL не указан в конфиге, откатываемся на SQLite по умолчанию,
+     * чтобы плагин не падал из-за пустого конфига.
+     */
+    private static void applySqliteFallback(DatabaseSettings config) {
+        if (config.getUrl() == null || config.getUrl().isBlank()) {
+            log.warn("URL базы данных не указан в конфиге, использую SQLite по умолчанию: {}",
+                    DatabaseSettings.DEFAULT_SQLITE_URL);
+            config.setUrl(DatabaseSettings.DEFAULT_SQLITE_URL);
+        }
     }
 
     private static @NotNull HikariConfig getHikariConfig(DatabaseSettings config) {

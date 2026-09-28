@@ -11,7 +11,11 @@ import com.ontadev.libs.menu.MenuManagerImpl;
 import com.ontadev.libs.menu.manager.MenuManager;
 import com.ontadev.libs.message.Message;
 import com.ontadev.libs.message.MessageDispatcher;
+import com.ontadev.libs.orm.OrmRepositoryHandler;
+import com.ontadev.libs.orm.adapter.EntityRowMapperFactory;
 import com.ontadev.libs.orm.database.DatabaseManager;
+import com.ontadev.libs.orm.entity.SchemaGenerator;
+import com.ontadev.libs.orm.mapper.EntityMapper;
 import com.ontadev.libs.player.PlayerResolver;
 import lombok.Getter;
 
@@ -23,8 +27,15 @@ public final class OntaDev_Libs extends OntaDev_Template {
     public static MenuManager defaultMenuManager;
     public static PlayerResolver playerResolver;
 
-
+    /**
+     * Общие (единые для всех плагинов на этой библиотеке) ORM-компоненты.
+     * Собираются один раз здесь и прокидываются в IoC каждого плагина
+     * в {@link OntaDev_Template#onEnable()}.
+     */
     public static DatabaseManager databaseManager;
+    public static EntityMapper entityMapper;
+    public static SchemaGenerator schemaGenerator;
+    public static OrmRepositoryHandler ormRepositoryHandler;
 
     @Override
     public void onLoad() {
@@ -36,6 +47,8 @@ public final class OntaDev_Libs extends OntaDev_Template {
 
     @Override
     public void onEnable() {
+        loadDatabase();
+
         createDefaultMenuManager();
         registerMenuManager();
 
@@ -48,19 +61,31 @@ public final class OntaDev_Libs extends OntaDev_Template {
         defaultMenuManager = container.create(MenuManagerImpl.class);
     }
 
-    private void loadDefaultConfig(PluginIoC ioC){
-        YamlConfigLoader configLoader = ioC.get(YamlConfigLoader.class);
+    private void loadDatabase(){
+        PluginIoC ioC = getPluginIoC();
 
-        SettingsConfig config = configLoader.loadFromClass(SettingsConfig.class);
-        ioC.registerInstance(SettingsConfig.class, config);
-    }
+        YamlConfigLoader loader = ioC.get(YamlConfigLoader.class);
+        SettingsConfig settingsConfig = loader.loadFromClass(SettingsConfig.class);
+        ioC.registerInstance(SettingsConfig.class, settingsConfig); // Регистрация конфига
 
-    private void loadDatabase(PluginIoC ioC){
-        DatabaseManager databaseManager = ioC.get(DatabaseManager.class);
+        String configuredUrl = settingsConfig.getDatabaseSettings().getUrl();
+        boolean urlWasMissing = configuredUrl == null || configuredUrl.isBlank();
 
-        ioC.registerInstance(DatabaseManager.class, databaseManager);
+        DatabaseManager databaseManager = new DatabaseManager(settingsConfig); // применит SQLite fallback при необходимости
+
+        if (urlWasMissing) {
+            settingsConfig.save(); // фиксируем в конфиге URL, на который откатились
+        }
+
+        EntityMapper entityMapper = new EntityMapper(databaseManager.getDialect());
+        SchemaGenerator schemaGenerator = new SchemaGenerator(databaseManager, entityMapper);
+
+        databaseManager.getJdbi().registerRowMapper(new EntityRowMapperFactory(entityMapper));
 
         OntaDev_Libs.databaseManager = databaseManager;
+        OntaDev_Libs.entityMapper = entityMapper;
+        OntaDev_Libs.schemaGenerator = schemaGenerator;
+        OntaDev_Libs.ormRepositoryHandler = new OrmRepositoryHandler();
     }
 
     private void registerMenuManager(){
