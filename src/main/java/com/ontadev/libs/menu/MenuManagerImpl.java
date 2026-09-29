@@ -20,6 +20,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -38,24 +39,13 @@ public class MenuManagerImpl implements MenuManager, Listener {
 
     private final PriorityQueue<MenuTaskState> queue = new PriorityQueue<>(Comparator.comparingLong(MenuTaskState::getNextRun));
 
-    /**
-     * Внедряется IoC контейнером. Нужен для планирования синхронных задач через {@link Bukkit#getScheduler()}.
-     */
     private final Plugin plugin;
     private final PlayerResolver playerResolver;
 
     private final Map<String, AbstractMenu> menus = new ConcurrentHashMap<>();
 
-    /**
-     * Ключ - UUID игрока.
-     */
     private final Map<UUID, MenuSession> activeSessions = new ConcurrentHashMap<>();
 
-    /**
-     * "Билет" последнего вызова {@link #open}, выданного для каждого игрока.
-     * Если за время резолва игрока подоспел более новый open(), старый
-     * вызов отменяется внутри своей синхронной задачи.
-     */
     private final Map<UUID, Long> openTickets = new ConcurrentHashMap<>();
 
     public MenuManagerImpl(Plugin plugin, PlayerResolver playerResolver) {
@@ -190,6 +180,8 @@ public class MenuManagerImpl implements MenuManager, Listener {
             inventory = Bukkit.createInventory(null, abstractMenu.inventoryType(), titleComponent);
         }
 
+        abstractMenu.onOpen(snapshot, player, inventory);
+
         MenuSession session = new MenuSession(abstractMenu, inventory, abstractMenu.resolveItems(snapshot), snapshot, player);
         renderSession(session);
 
@@ -205,9 +197,6 @@ public class MenuManagerImpl implements MenuManager, Listener {
         player.openInventory(inventory);
     }
 
-    /**
-     * Обновляет предметы в инвентаре сессии на основе динамических данных игрока.
-     */
     private void renderSession(MenuSession session) {
         AbstractMenu abstractMenu = session.getAbstractMenu();
         Inventory inventory = session.getInventory();
@@ -232,8 +221,14 @@ public class MenuManagerImpl implements MenuManager, Listener {
     @EventHandler
     public void onClick(InventoryClickEvent event) {
         MenuSession session = activeSessions.get(event.getWhoClicked().getUniqueId());
-        if (session == null || event.getView().getTopInventory() != session.getInventory()) {
+        boolean sameInventory = session != null && event.getView().getTopInventory() == session.getInventory();
+
+        if (session == null || !sameInventory) {
             log.warn("session not found");
+            return;
+        }
+
+        if (session.getAbstractMenu().onClick(session.getPlayerSnapshot(), event)) {
             return;
         }
 
@@ -256,6 +251,10 @@ public class MenuManagerImpl implements MenuManager, Listener {
             return;
         }
 
+        if (session.getAbstractMenu().onDrag(session.getPlayerSnapshot(), event)) {
+            return;
+        }
+
         int topSize = session.getInventory().getSize();
         for (int rawSlot : event.getRawSlots()) {
             if (rawSlot >= topSize) continue;
@@ -274,19 +273,31 @@ public class MenuManagerImpl implements MenuManager, Listener {
     }
 
     @EventHandler
+    public void onDrop(PlayerDropItemEvent event) {
+        MenuSession session = activeSessions.get(event.getPlayer().getUniqueId());
+        if (session == null) return;
+
+        if (session.getAbstractMenu().onDrop(session.getPlayerSnapshot(), event)) {
+            return;
+        }
+
+        if (!session.getAbstractMenu().isEditable()) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
     public void onClose(InventoryCloseEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
         MenuSession session = activeSessions.get(uuid);
 
         if (session != null && event.getView().getTopInventory() == session.getInventory()) {
+            session.getAbstractMenu().onClose(session.getPlayerSnapshot(), session.getPlayer(), session.getInventory());
             session.setClosed(true);
             activeSessions.remove(uuid);
         }
     }
 
-    /**
-     * Защитная очистка на случай, если InventoryCloseEvent не сработал (например, при принудительном отключении).
-     */
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
@@ -296,10 +307,6 @@ public class MenuManagerImpl implements MenuManager, Listener {
         openTickets.remove(uuid);
     }
 
-    /**
-     * Асинхронно получает UUID игрока из PlayerSnapshot.
-     * Теперь корректно использует PlayerResolver для резолва.
-     */
     private CompletableFuture<Optional<UUID>> uuidOf(PlayerSnapshot snapshot) {
         return playerResolver.getPlayer(snapshot)
                 .thenApply(player -> {
@@ -314,12 +321,6 @@ public class MenuManagerImpl implements MenuManager, Listener {
                 });
     }
 
-    /**
-     * Выполняет задачу на главном потоке (синхронно, если уже на нём) и
-     * возвращает future, который завершается после её выполнения - либо
-     * с ошибкой, если задача бросила исключение или планировщик недоступен
-     * (например, плагин уже выключается).
-     */
     private CompletableFuture<Void> runSyncAsync(Runnable task) {
         CompletableFuture<Void> future = new CompletableFuture<>();
 

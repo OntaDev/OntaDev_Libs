@@ -13,7 +13,11 @@ import com.ontadev.libs.player.PlayerSnapshot;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Collection;
@@ -171,6 +175,48 @@ public abstract class AbstractMenu {
 
     public String id() {
         return getClass().getName();
+    }
+
+    /**
+     * Вызывается один раз при открытии, сразу после создания пустого {@link Inventory}
+     * и до применения static/dynamic {@link ItemModel} и показа игроку. Нужен меню
+     * с произвольным (не model-based) содержимым - например, зеркалу реального
+     * контейнера (шалкер-бокс и т.п.), которое хочет заполнить слоты напрямую.
+     * По умолчанию ничего не делает.
+     */
+    public void onOpen(PlayerSnapshot snapshot, Player player, Inventory inventory) {
+    }
+
+    /**
+     * Вызывается при закрытии меню игроком, до удаления сессии из {@link MenuManagerImpl}.
+     * Нужен для persist произвольного (не model-based) содержимого {@code inventory}
+     * обратно во внешнее хранилище. По умолчанию ничего не делает.
+     */
+    public void onClose(PlayerSnapshot snapshot, Player player, Inventory inventory) {
+    }
+
+    /**
+     * Хук для реакции меню на клик до применения стандартной {@link ItemModel}-логики
+     * в {@link MenuManagerImpl#onClick}. Верните {@code true}, если событие уже
+     * обработано полностью (дальнейшая обработка будет пропущена). По умолчанию
+     * ничего не делает и возвращает {@code false}.
+     */
+    public boolean onClick(PlayerSnapshot snapshot, InventoryClickEvent event) {
+        return false;
+    }
+
+    /**
+     * Аналог {@link #onClick} для {@link InventoryDragEvent}.
+     */
+    public boolean onDrag(PlayerSnapshot snapshot, InventoryDragEvent event) {
+        return false;
+    }
+
+    /**
+     * Аналог {@link #onClick} для {@link PlayerDropItemEvent}, пока меню открыто.
+     */
+    public boolean onDrop(PlayerSnapshot snapshot, PlayerDropItemEvent event) {
+        return false;
     }
 
 }
