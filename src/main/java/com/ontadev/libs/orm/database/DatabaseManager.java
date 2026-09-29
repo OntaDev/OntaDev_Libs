@@ -29,7 +29,7 @@ public final class DatabaseManager {
     public DatabaseManager(SettingsConfig settingsConfig) {
         DatabaseSettings config = settingsConfig.getDatabaseSettings();
 
-        applySqliteFallback(config);
+        applyH2Fallback(config);
 
         HikariConfig hikariConfig = getHikariConfig(config);
 
@@ -45,14 +45,14 @@ public final class DatabaseManager {
     }
 
     /**
-     * Если URL не указан в конфиге, откатываемся на SQLite по умолчанию,
+     * Если URL не указан в конфиге, откатываемся на H2 по умолчанию,
      * чтобы плагин не падал из-за пустого конфига.
      */
-    private static void applySqliteFallback(DatabaseSettings config) {
+    private static void applyH2Fallback(DatabaseSettings config) {
         if (config.getUrl() == null || config.getUrl().isBlank()) {
-            log.warn("URL базы данных не указан в конфиге, использую SQLite по умолчанию: {}",
-                    DatabaseSettings.DEFAULT_SQLITE_URL);
-            config.setUrl(DatabaseSettings.DEFAULT_SQLITE_URL);
+            log.warn("URL базы данных не указан в конфиге, использую H2 по умолчанию: {}",
+                    DatabaseSettings.DEFAULT_H2_URL);
+            config.setUrl(DatabaseSettings.DEFAULT_H2_URL);
         }
     }
 

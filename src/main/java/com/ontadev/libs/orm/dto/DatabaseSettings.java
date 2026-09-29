@@ -15,9 +15,9 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class DatabaseSettings {
-    public static final String DEFAULT_SQLITE_URL = "jdbc:sqlite:plugins/OntaDev_Libs/database.db";
+    public static final String DEFAULT_H2_URL = "jdbc:h2:plugins/OntaDev_Libs/database";
 
-    private String url = DEFAULT_SQLITE_URL;
+    private String url = DEFAULT_H2_URL;
     private String username = "";
     private String password = "";
     @SerializedName("maximum-pool-size")

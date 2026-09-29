@@ -141,7 +141,7 @@ MyService service = pluginIoC.get(MyService.class);
 
 ## ORM
 
-Собственный слой поверх JDBI Core (не SqlObject): аннотации сущностей, автогенерация схемы, `@Query`/`@Modifying` для произвольного SQL, `returnable` `save()`. Поддерживаемые диалекты: MySQL, PostgreSQL, SQLite, H2.
+Собственный слой поверх JDBI Core (не SqlObject): аннотации сущностей, автогенерация схемы, `@Query`/`@Modifying` для произвольного SQL, `returnable` `save()`. Поддерживаемые диалекты: MySQL, PostgreSQL, H2 (встроенная БД по умолчанию).
 
 ### Сущность
 
@@ -342,4 +342,4 @@ settings.save();
 mvn clean package
 ```
 
-Собирает shaded jar (`maven-shade-plugin`) со всеми зависимостями, кроме `provided` (Paper API, Adventure, LuckPerms - их даёт сервер). Тесты гоняются на реальных H2, SQLite и, если доступны без Docker, embedded Postgres/MariaDB - при недоступности движка на текущей платформе такие тесты сами помечаются skipped, а не валят сборку.
+Собирает shaded jar (`maven-shade-plugin`) со всеми зависимостями, кроме `provided` (Paper API, Adventure, LuckPerms - их даёт сервер). Тесты гоняются на реальном H2 и, если доступны без Docker, embedded Postgres/MariaDB - при недоступности движка на текущей платформе такие тесты сами помечаются skipped, а не валят сборку.
