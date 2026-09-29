@@ -15,7 +15,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class DatabaseSettings {
-    public static final String DEFAULT_H2_URL = "jdbc:h2:plugins/OntaDev_Libs/database";
+    public static final String DEFAULT_H2_URL = "jdbc:h2:./plugins/OntaDev_Libs/database";
 
     private String url = DEFAULT_H2_URL;
     private String username = "";

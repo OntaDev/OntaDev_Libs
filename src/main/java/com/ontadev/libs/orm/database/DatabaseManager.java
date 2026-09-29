@@ -31,10 +31,11 @@ public final class DatabaseManager {
 
         applyH2Fallback(config);
 
-        HikariConfig hikariConfig = getHikariConfig(config);
+        this.dialect = Dialect.fromJdbcUrl(config.getUrl());
+
+        HikariConfig hikariConfig = getHikariConfig(config, dialect);
 
         this.dataSource = new HikariDataSource(hikariConfig);
-        this.dialect = Dialect.fromJdbcUrl(config.getUrl());
 
         this.jdbi = Jdbi.create(dataSource);
 
@@ -56,9 +57,24 @@ public final class DatabaseManager {
         }
     }
 
-    private static @NotNull HikariConfig getHikariConfig(DatabaseSettings config) {
+    private static String resolveDriverClassName(Dialect dialect) {
+        switch (dialect) {
+            case MYSQL:
+                return "com.mysql.cj.jdbc.Driver";
+            case POSTGRESQL:
+                return "org.postgresql.Driver";
+            case H2:
+            case H2_POSTGRES:
+                return "org.h2.Driver";
+            default:
+                throw new IllegalStateException("Unexpected database type: " + dialect);
+        }
+    }
+
+    private static @NotNull HikariConfig getHikariConfig(DatabaseSettings config, Dialect dialect) {
         HikariConfig hikariConfig = new HikariConfig();
         hikariConfig.setJdbcUrl(config.getUrl());
+        hikariConfig.setDriverClassName(resolveDriverClassName(dialect));
 
         if (config.getUsername() != null) {
             hikariConfig.setUsername(config.getUsername());
