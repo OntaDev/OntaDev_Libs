@@ -1,7 +1,7 @@
 package com.ontadev.libs.ioc;
 
 import com.ontadev.libs.ioc.annotation.common.Priority;
-import com.ontadev.libs.ioc.annotation.stereotype.Command;
+import com.ontadev.libs.ioc.annotation.stereotype.RegisterCommand;
 import com.ontadev.libs.ioc.handlers.ClassAnnotationHandler;
 import com.ontadev.libs.ioc.handlers.FieldAnnotationHandler;
 import com.ontadev.libs.ioc.handlers.InterfaceHandler;
@@ -431,6 +431,7 @@ public class IoCContainer {
             }
         }
 
+        //noinspection DataFlowIssue
         return get((Class<?>) type);
     }
 
@@ -522,7 +523,7 @@ public class IoCContainer {
         private final Class<? extends Annotation> annotation;
 
         private static ComponentPriority defaultPriority() {
-            return new ComponentPriority(0, 0, Command.class);
+            return new ComponentPriority(0, 0, RegisterCommand.class);
         }
     }
 }

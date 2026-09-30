@@ -14,6 +14,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Priority(priority = 99)
-public @interface Command {
+public @interface RegisterCommand {
     int priority() default 0;
 }

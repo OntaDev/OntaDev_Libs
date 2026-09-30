@@ -60,7 +60,7 @@ public final class MyPlugin extends OntaDev_Template {
 | `@Component` | компонент общего назначения |
 | `@Repository` | компонент уровня доступа к данным (не путать с ORM-репозиториями ниже) |
 | `@Config` | класс настроек, автоматически загружается через `YamlConfigLoader` перед созданием |
-| `@Command` | наследник `AbstractCommand`, автоматически регистрируется в Bukkit |
+| `@RegisterCommand` | наследник `AbstractCommand`, автоматически регистрируется в Bukkit |
 | `@Menu` | наследник `AbstractMenu`, автоматически регистрируется в `MenuManager` |
 
 `@AutoListener` в этот список не входит - в отличие от остальных, сама по себе она **не создаёт бин**. Это наследник `Listener`, который автоматически регистрируется через `Bukkit.getPluginManager()`, но только когда контейнер и так создаёт экземпляр класса - `AutoListenerHandler` не вызывает `registerComponent`, а лишь навешивает регистрацию слушателя на `postCreate`. Класс, помеченный только `@AutoListener`, контейнер не инстанцирует и слушатель зарегистрирован не будет - добавляйте `@AutoListener` вместе с одним из стереотипов выше (обычно `@Component` или `@Service`):

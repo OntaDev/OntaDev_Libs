@@ -6,7 +6,7 @@
 
     <groupId>com.ontadev</groupId>
     <artifactId>libs</artifactId>
-    <version>0.2.3</version>
+    <version>0.2.4</version>
     <packaging>jar</packaging>
 
     <name>OntaDev_Libs</name>
@@ -49,9 +49,6 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <!-- checker-qual - compile-time-only аннотации (@Nullable и т.п.), в рантайме не используются.
-                         protobuf-java тянется MySQL-драйвером ради X DevAPI (document store), который эта
-                         библиотека не использует - обычный JDBC/jdbi в нём не нуждается. -->
                     <artifactSet>
                         <excludes>
                             <exclude>org.checkerframework:checker-qual</exclude>
