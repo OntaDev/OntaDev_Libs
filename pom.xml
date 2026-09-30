@@ -6,7 +6,7 @@
 
     <groupId>com.ontadev</groupId>
     <artifactId>libs</artifactId>
-    <version>0.2.4</version>
+    <version>0.2.5</version>
     <packaging>jar</packaging>
 
     <name>OntaDev_Libs</name>
@@ -77,6 +77,10 @@
                             <pattern>org.bstats</pattern>
                             <shadedPattern>com.ontadev.libs.shaded.bstats</shadedPattern>
                         </relocation>
+                        <relocation>
+                            <pattern>de.tr7zw.changeme.nbtapi</pattern>
+                            <shadedPattern>com.ontadev.libs.shaded.nbtapi</shadedPattern>
+                        </relocation>
                     </relocations>
                     <!-- Без этого при коллизии META-INF/services/java.sql.Driver (h2/mysql/postgresql/sqlite-jdbc
                          все регистрируют себя этим файлом) shade оставляет только один драйвер вместо слияния,
@@ -138,6 +142,12 @@
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
             <version>7.1.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>de.tr7zw</groupId>
+            <artifactId>item-nbt-api</artifactId>
+            <version>2.15.3</version>
         </dependency>
 
         <dependency>
