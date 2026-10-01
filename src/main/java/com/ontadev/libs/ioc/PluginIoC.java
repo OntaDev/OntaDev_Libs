@@ -6,7 +6,6 @@ package com.ontadev.libs.ioc;
 
 import com.ontadev.libs.config.YamlConfigLoader;
 import com.ontadev.libs.ioc.handlers.impl.*;
-import com.ontadev.libs.menu.manager.MenuManager;
 import com.ontadev.libs.message.Message;
 import com.ontadev.libs.serialization.GsonAdapter;
 import com.ontadev.libs.serialization.adapters.ComponentAdapter;
@@ -37,7 +36,6 @@ public class PluginIoC {
     private final ShutdownHandler shutdownHandler;
     private final Set<Class<?>> listeners = new HashSet<>();
     private final YamlConfigLoader configLoader;
-    private MenuManager menuManager;
 
     private Set<Class<?>> tempClasses;
 
@@ -185,7 +183,7 @@ public class PluginIoC {
         container.registerClassHandler(new ServiceHandler());
         container.registerClassHandler(new CommandHandler(plugin));
         container.registerClassHandler(new AutoListenerHandler(plugin));
-        container.registerClassHandler(new MenuHandler(menuManager));
+        container.registerClassHandler(new MenuHandler());
 
 
         // Поля

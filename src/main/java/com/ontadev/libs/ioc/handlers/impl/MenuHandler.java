@@ -13,11 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class MenuHandler implements ClassAnnotationHandler<Menu> {
-    private final MenuManager menuManager;
-
-    public MenuHandler(MenuManager menuManager){
-        this.menuManager = menuManager;
-    }
 
     @Override
     public Class<Menu> getAnnotation() {
@@ -27,7 +22,7 @@ public class MenuHandler implements ClassAnnotationHandler<Menu> {
     @Override
     public Object preCreate(IoCContainer container, Class<?> clazz, Menu annotation) {
 
-        if (!clazz.isAssignableFrom(AbstractMenu.class)) {
+        if (!AbstractMenu.class.isAssignableFrom(clazz)) {
             throwError(clazz.getName());
             return null;
         }
@@ -50,7 +45,7 @@ public class MenuHandler implements ClassAnnotationHandler<Menu> {
             return;
         }
 
-        menuManager.registerMenu((AbstractMenu) instance);
+        container.get(MenuManager.class).registerMenu((AbstractMenu) instance);
     }
 
     private void throwError(String className){

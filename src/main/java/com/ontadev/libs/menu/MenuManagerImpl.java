@@ -224,7 +224,6 @@ public class MenuManagerImpl implements MenuManager, Listener {
         boolean sameInventory = session != null && event.getView().getTopInventory() == session.getInventory();
 
         if (session == null || !sameInventory) {
-            log.warn("session not found");
             return;
         }
 

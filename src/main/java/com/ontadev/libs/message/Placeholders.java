@@ -24,7 +24,7 @@ public class Placeholders {
     }
 
     public static Placeholders of(String key, String... values) {
-        return new Placeholders().add(key, (Object) values);
+        return new Placeholders().add(key, (Object[]) values);
     }
 
     public static Placeholders of() {
