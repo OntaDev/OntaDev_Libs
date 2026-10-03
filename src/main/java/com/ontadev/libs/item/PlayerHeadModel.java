@@ -18,6 +18,7 @@ import org.bukkit.inventory.meta.SkullMeta;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
+@SuppressWarnings("unused")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
@@ -51,6 +52,7 @@ public class PlayerHeadModel extends ItemModel {
     /**
      * Устанавливает владельца головы по UUID.
      */
+    @SuppressWarnings("unused")
     public PlayerHeadModel owner(UUID uuid) {
         return owner(Bukkit.getOfflinePlayer(uuid));
     }
@@ -65,6 +67,9 @@ public class PlayerHeadModel extends ItemModel {
 
     @Override
     public ItemStack toItemStack() {
+        if (getMaterial() != Material.PLAYER_HEAD) {
+            setMaterial(Material.PLAYER_HEAD);
+        }
         ItemStack item = super.toItemStack();
 
         if (!(item.getItemMeta() instanceof SkullMeta)) {
