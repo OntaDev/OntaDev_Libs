@@ -87,25 +87,40 @@ public class IoCContainer {
         registerInstance((Class<Object>) iface, instance);
     }
 
+    /**
+     * Two passes, deliberately not one combined loop over {@code classes}: a marker-interface-backed
+     * dependency (e.g. an {@code OrmRepository} subinterface resolved to a dynamic proxy) must be
+     * registered before ANY concrete class's constructor can ask for it - but {@code classes} is a
+     * {@code Set}, with no ordering guarantee at all. A concrete class whose constructor depends on
+     * such an interface could previously get constructed (via {@code ClassAnnotationHandler.preCreate}
+     * or a dependency chain reachable during this same scan) before the loop ever reached that
+     * interface's own entry, silently failing to resolve it ("Class is ... is interface/annotation/
+     * abstract") even though nothing about the interface itself was wrong - only the Set's iteration
+     * order was unlucky. Interfaces are now fully handled first, so every marker-interface instance
+     * is already in {@code instances}/{@code implementations} before any concrete class is touched.
+     */
     private void scanClassAnnotations(Set<Class<?>> classes) {
         Map<Class<?>, List<Class<?>>> implementationsByInterface = buildImplementationMap(classes);
 
         for (Class<?> clazz : classes) {
+            if (!clazz.isInterface()) continue;
             if (clazz.isAnnotation()) continue;
             if (blockedClasses.contains(clazz)) continue;
 
-            if (clazz.isInterface()) {
-                Optional<InterfaceHandler<?>> handler = findInterfaceHandler(clazz);
+            Optional<InterfaceHandler<?>> handler = findInterfaceHandler(clazz);
 
-                if (handler.isPresent()) {
-                    handleByMarker(clazz, handler.get(), implementationsByInterface);
-                    continue;
-                }
-
-                scanInterfaceAnnotations(clazz, implementationsByInterface);
+            if (handler.isPresent()) {
+                handleByMarker(clazz, handler.get(), implementationsByInterface);
                 continue;
             }
 
+            scanInterfaceAnnotations(clazz, implementationsByInterface);
+        }
+
+        for (Class<?> clazz : classes) {
+            if (clazz.isInterface()) continue;
+            if (clazz.isAnnotation()) continue;
+            if (blockedClasses.contains(clazz)) continue;
             if (Modifier.isAbstract(clazz.getModifiers())) continue;
 
             for (Annotation annotation : clazz.getAnnotations()) {
