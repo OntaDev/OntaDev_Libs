@@ -40,6 +40,7 @@ public final class JsonTypeAdapter implements TypeAdapter {
         return Optional.of(new JsonColumnMapper<>((Class<?>) type));
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private static boolean isJsonType(Type type) {
         if (!(type instanceof Class<?>)) {
             return false;
@@ -48,9 +49,6 @@ public final class JsonTypeAdapter implements TypeAdapter {
     }
 
     private static boolean isNativelySupported(Class<?> type) {
-        // isEnum() is false for the runtime class of a constant with its own body (org.bukkit.ChatColor$16),
-        // which is what JDBI hands us when a value is bound as Object - such a constant must still be
-        // written as its plain name, not as Gson JSON ("\"WHITE\"").
         return type.isPrimitive()
                 || Enum.class.isAssignableFrom(type)
                 || type == String.class

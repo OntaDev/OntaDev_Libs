@@ -12,8 +12,7 @@ class JsonTypeAdapterTest {
 
     enum Plain {A}
 
-    // Constant-specific body: A.getClass() is a synthetic subclass for which Class.isEnum() is false,
-    // exactly like org.bukkit.ChatColor's constants.
+    @SuppressWarnings("unused")
     enum WithBodies {
         A {
             @Override
