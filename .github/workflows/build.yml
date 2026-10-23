@@ -28,7 +28,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'maven'
+          # cache: maven не нужен: на self-hosted раннере ~/.m2 и JDK остаются на диске между запусками
 
       - name: Build
         run: mvn -B install --file pom.xml
