@@ -9,6 +9,7 @@ import com.ontadev.libs.ioc.handlers.MethodAnnotationHandler;
 import com.ontadev.libs.ioc.annotation.lifecycle.Shutdown;
 import lombok.extern.slf4j.Slf4j;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +31,10 @@ public class ShutdownHandler implements MethodAnnotationHandler<Shutdown> {
             try {
                 method.invoke(instance);
             } catch (Exception e) {
-                log.error("Error while invoking method with message: {}", e.getMessage(), e);
+                // Method.invoke заворачивает исключение хука в InvocationTargetException, у которой сообщения нет
+                Throwable cause = e instanceof InvocationTargetException && e.getCause() != null ? e.getCause() : e;
+                log.error("Error while invoking @Shutdown method {}.{}: {}", instance.getClass().getSimpleName(), method.getName(),
+                        cause.getMessage(), cause);
             }
         });
     }
