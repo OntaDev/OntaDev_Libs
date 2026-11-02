@@ -23,6 +23,14 @@ public abstract class YamlConfig {
         configLoader.saveConfig(this);
     }
 
+    /**
+     * Re-reads this config from disk while preserving the injected instance.
+     */
+    public void reload() {
+        if (configLoader == null) return;
+        configLoader.reloadConfig(this);
+    }
+
     public void applyFrom(YamlConfig other) {
         if (other == null) return;
         Class<?> clazz = other.getClass();

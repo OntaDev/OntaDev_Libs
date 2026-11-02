@@ -68,6 +68,25 @@ public class YamlConfigLoaderTest {
     }
 
     @Test
+    void shouldPreserveCommentsUnknownKeysAndFormattingIntent(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("sample.yml");
+        Files.writeString(file, "# Main comment\nname: old # inline comment\namount: 10\nunknown: keep-me\n");
+        YamlConfigLoader loader = new YamlConfigLoader(dir, null);
+        SampleConfig config = loader.loadFromClass(SampleConfig.class);
+
+        config.setName("new-value");
+        config.setAmount(25);
+        config.save();
+
+        String saved = Files.readString(file);
+        Assertions.assertTrue(saved.contains("# Main comment"));
+        Assertions.assertTrue(saved.contains("# inline comment"));
+        Assertions.assertTrue(saved.contains("unknown: keep-me"));
+        Assertions.assertTrue(saved.contains("name: new-value"));
+        Assertions.assertTrue(saved.contains("amount: 25"));
+    }
+
+    @Test
     void shouldReturnCachedInstanceOnSecondLoad(@TempDir Path dir) {
         YamlConfigLoader loader = new YamlConfigLoader(dir, null);
 
@@ -75,6 +94,31 @@ public class YamlConfigLoaderTest {
         SampleConfig second = loader.loadFromClass(SampleConfig.class);
 
         Assertions.assertSame(first, second);
+    }
+
+    @Test
+    void shouldReloadFileIntoSameInstance(@TempDir Path dir) throws Exception {
+        YamlConfigLoader loader = new YamlConfigLoader(dir, null);
+        SampleConfig config = loader.loadFromClass(SampleConfig.class);
+
+        Files.writeString(dir.resolve("sample.yml"), "name: reloaded\namount: 73\n");
+        config.reload();
+
+        Assertions.assertEquals("reloaded", config.getName());
+        Assertions.assertEquals(73, config.getAmount());
+        Assertions.assertSame(config, loader.loadFromClass(SampleConfig.class));
+    }
+
+    @Test
+    void shouldKeepCurrentValuesWhenReloadFails(@TempDir Path dir) throws Exception {
+        YamlConfigLoader loader = new YamlConfigLoader(dir, null);
+        SampleConfig config = loader.loadFromClass(SampleConfig.class);
+        config.setName("still-current");
+
+        Files.writeString(dir.resolve("sample.yml"), "broken: [yaml\n");
+
+        Assertions.assertThrows(RuntimeException.class, config::reload);
+        Assertions.assertEquals("still-current", config.getName());
     }
 
     @Test

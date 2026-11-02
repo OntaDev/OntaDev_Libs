@@ -15,7 +15,6 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
-import java.io.Writer;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -30,6 +29,7 @@ public class YamlConfigLoader {
     private final Gson gson;
     private final Path dataDirectory;
     private final Yaml yaml;
+    private final CommentPreservingYaml preservingYaml = new CommentPreservingYaml();
     private final TypeToken<Map<String, Object>> mapToken = new TypeToken<>() {};
     private final Map<String, YamlConfig> cacheConfigs = new ConcurrentHashMap<>();
 
@@ -69,20 +69,34 @@ public class YamlConfigLoader {
         Path file = instance.getFile();
 
         try {
-            if (!Files.exists(file)) {
-                Files.createFile(file);
-            }
-
             JsonElement jsonElement = gson.toJsonTree(instance);
 
             Map<String, Object> yamlMap = gson.fromJson(jsonElement, mapToken.getType());
-
-            try (Writer writer = Files.newBufferedWriter(file)) {
-                yaml.dump(yamlMap, writer);
-            }
+            preservingYaml.save(file, yamlMap);
         } catch (IOException e) {
             log.error("Error while saving config {}", instance.getFileName(), e);
             throw new RuntimeException("Failed to save " + instance.getFileName(), e);
+        }
+    }
+
+    public <T extends YamlConfig> void reloadConfig(T instance) {
+        Path file = instance.getFile();
+        if (file == null) {
+            throw new IllegalStateException("Config is not attached to a file: " + instance.getFileName());
+        }
+
+        try (Reader reader = Files.newBufferedReader(file)) {
+            Object rawYaml = yaml.load(reader);
+            JsonElement jsonFromYaml = gson.toJsonTree(rawYaml);
+
+            @SuppressWarnings("unchecked")
+            T loaded = (T) gson.fromJson(jsonFromYaml, instance.getClass());
+            loaded.setFile(file);
+            loaded.setConfigLoader(this);
+            instance.applyFrom(loaded);
+        } catch (Exception e) {
+            log.error("Failed to reload config {}", instance.getFileName(), e);
+            throw new RuntimeException("Failed to reload " + instance.getFileName(), e);
         }
     }
 
@@ -108,7 +122,6 @@ public class YamlConfigLoader {
                 return instance;
             }
 
-            Map<String, Object> loadedMap;
             try (Reader reader = Files.newBufferedReader(file)) {
                 Object rawYaml = yaml.load(reader);
                 JsonElement jsonFromYaml = gson.toJsonTree(rawYaml);
@@ -118,7 +131,8 @@ public class YamlConfigLoader {
                 loadedInstance.setFile(file);
                 loadedInstance.setConfigLoader(this);
 
-                if (applyDefaultsFromClass(loadedInstance, rawYaml instanceof Map ? (Map) rawYaml : null)) {
+                Map<?, ?> rawData = rawYaml instanceof Map<?, ?> ? (Map<?, ?>) rawYaml : null;
+                if (applyDefaultsFromClass(loadedInstance, rawData)) {
                     saveConfig(loadedInstance);
                     log.info("Config {} updated with new default values.", fileName);
                 }
@@ -149,7 +163,7 @@ public class YamlConfigLoader {
         return constructor.newInstance();
     }
 
-    private boolean applyDefaultsFromClass(Object instance, Map<String, Object> rawData) {
+    private boolean applyDefaultsFromClass(Object instance, Map<?, ?> rawData) {
         if (rawData == null) return false;
         boolean updated = false;
 

@@ -6,7 +6,7 @@
 
     <groupId>com.ontadev</groupId>
     <artifactId>libs</artifactId>
-    <version>0.2.9</version>
+    <version>0.2.10</version>
     <packaging>jar</packaging>
 
     <name>OntaDev_Libs</name>
@@ -70,6 +70,10 @@
                     </filters>
                     <relocations>
                         <relocation>
+                            <pattern>org.yaml.snakeyaml</pattern>
+                            <shadedPattern>com.ontadev.libs.shaded.snakeyaml</shadedPattern>
+                        </relocation>
+                        <relocation>
                             <pattern>io.github.classgraph</pattern>
                             <shadedPattern>com.ontadev.libs.shaded.classgraph</shadedPattern>
                         </relocation>
@@ -125,6 +129,11 @@
     </repositories>
 
     <dependencies>
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>1.33</version>
+        </dependency>
         <dependency>
             <groupId>com.destroystokyo.paper</groupId>
             <artifactId>paper-api</artifactId>
