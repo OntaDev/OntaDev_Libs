@@ -9,6 +9,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Требует результат CompletableFuture у SQL-метода ORM-репозитория.
+ * Асинхронное выполнение определяется типом CompletableFuture и работает без этой аннотации.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface Async {

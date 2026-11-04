@@ -9,6 +9,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Регистрирует созданный IoC-компонент как Bukkit-слушатель.
+ * Класс должен реализовывать Listener и отдельно регистрироваться как компонент, например через @Component.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface AutoListener {

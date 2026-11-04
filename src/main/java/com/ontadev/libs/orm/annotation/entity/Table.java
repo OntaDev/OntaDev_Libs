@@ -6,8 +6,14 @@ package com.ontadev.libs.orm.annotation.entity;
 
 import java.lang.annotation.*;
 
+/**
+ * Задаёт имя SQL-таблицы сущности.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface Table {
+    /**
+     * Имя таблицы; пустая строка использует имя класса в snake_case.
+     */
     String value();
 }

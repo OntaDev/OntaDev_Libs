@@ -11,9 +11,16 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Регистрирует класс репозитория как компонент IoC-контейнера.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Priority(priority = 102)
 public @interface Repository {
+    /**
+     * Приоритет среди компонентов с одинаковым приоритетом аннотации.
+     * Большие значения создаются раньше при соблюдении порядка зависимостей.
+     */
     int priority() default 0;
 }

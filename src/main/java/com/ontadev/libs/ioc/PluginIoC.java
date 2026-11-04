@@ -191,6 +191,7 @@ public class PluginIoC {
 
         // Методы
         container.registerMethodHandler(shutdownHandler);
+        container.registerMethodHandler(new PostConstructHandler());
     }
 
     public void shutdownPlugin() {

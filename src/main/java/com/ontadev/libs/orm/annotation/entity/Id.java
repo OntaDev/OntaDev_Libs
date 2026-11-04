@@ -6,6 +6,10 @@ package com.ontadev.libs.orm.annotation.entity;
 
 import java.lang.annotation.*;
 
+/**
+ * Помечает единственный первичный ключ сущности.
+ * Для save() поле должно иметь ссылочный тип, например Long или Integer.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
 public @interface Id {

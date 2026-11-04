@@ -1,5 +1,8 @@
 package com.ontadev.libs.config;
 
+import com.google.gson.annotations.SerializedName;
+import org.yaml.snakeyaml.comments.CommentLine;
+import org.yaml.snakeyaml.comments.CommentType;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -14,6 +17,9 @@ import org.yaml.snakeyaml.representer.Representer;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.Map;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,7 +45,12 @@ final class CommentPreservingYaml {
     }
 
     void save(Path file, Object value) throws IOException {
+        save(file, value, null);
+    }
+
+    void save(Path file, Object value, Object commentSource) throws IOException {
         Node updated = yaml.represent(value);
+        if (commentSource != null) addComments(updated, commentSource);
         if (Files.exists(file) && Files.size(file) > 0) {
             try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
                 Node existing = yaml.compose(reader);
@@ -64,6 +75,52 @@ final class CommentPreservingYaml {
             }
         } finally {
             Files.deleteIfExists(temporary);
+        }
+    }
+
+    private void addComments(Node node, Object source) throws IOException {
+        if (source == null) return;
+        if (node instanceof SequenceNode && source instanceof Iterable<?>) {
+            java.util.Iterator<?> values = ((Iterable<?>) source).iterator();
+            for (Node item : ((SequenceNode) node).getValue()) {
+                if (!values.hasNext()) break;
+                addComments(item, values.next());
+            }
+            return;
+        }
+        if (!(node instanceof MappingNode)) return;
+        MappingNode mapping = (MappingNode) node;
+        if (source instanceof Map<?, ?>) {
+            for (NodeTuple tuple : mapping.getValue()) {
+                addComments(tuple.getValueNode(), ((Map<?, ?>) source).get(key(tuple.getKeyNode())));
+            }
+            return;
+        }
+        for (Class<?> type = source.getClass(); type != null && type != Object.class;
+             type = type.getSuperclass()) {
+            for (Field field : type.getDeclaredFields()) {
+                if (field.isSynthetic() || Modifier.isStatic(field.getModifiers())
+                        || Modifier.isTransient(field.getModifiers())) continue;
+                SerializedName name = field.getAnnotation(SerializedName.class);
+                String yamlName = name == null ? field.getName() : name.value();
+                int index = findKey(mapping.getValue(), yamlName);
+                if (index < 0) continue;
+                NodeTuple tuple = mapping.getValue().get(index);
+                Comment comment = field.getAnnotation(Comment.class);
+                if (comment != null && !comment.value().isEmpty()) {
+                    List<CommentLine> lines = new ArrayList<>();
+                    for (String line : comment.value().split("\\R", -1)) {
+                        lines.add(new CommentLine(null, null, " " + line, CommentType.BLOCK));
+                    }
+                    tuple.getKeyNode().setBlockComments(lines);
+                }
+                try {
+                    field.setAccessible(true);
+                    addComments(tuple.getValueNode(), field.get(source));
+                } catch (IllegalAccessException e) {
+                    throw new IOException("Cannot read config field " + field.getName(), e);
+                }
+            }
         }
     }
 

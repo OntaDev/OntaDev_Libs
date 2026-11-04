@@ -9,8 +9,16 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Задаёт SQL-запрос для метода ORM-репозитория.
+ * Поддерживает одиночный результат, Optional, список и CompletableFuture.
+ * Параметры связываются через @Bind, имена параметров или позиционные знаки вопроса.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface Query {
+    /**
+     * SQL-запрос для чтения данных.
+     */
     String value() default "";
 }

@@ -9,6 +9,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Маркер класса с retention CLASS. IoC-контейнер его не обрабатывает.
+ */
 @SuppressWarnings("unused")
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.TYPE)

@@ -11,9 +11,17 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Регистрирует конфиг как компонент IoC-контейнера.
+ * Класс должен наследовать YamlConfig; экземпляр создаётся через YamlConfigLoader.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Priority(priority = 103)
 public @interface Config {
+    /**
+     * Приоритет среди компонентов с одинаковым приоритетом аннотации.
+     * Большие значения создаются раньше при соблюдении порядка зависимостей.
+     */
     int priority() default 0;
 }

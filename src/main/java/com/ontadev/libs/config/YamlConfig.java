@@ -9,6 +9,10 @@ import lombok.Setter;
 
 import java.nio.file.Path;
 
+/**
+ * Базовый класс YAML-конфига, привязываемого к файлу через {@link YamlConfigLoader}.
+ * Статические и transient-поля не сохраняются.
+ */
 @SuppressWarnings("unused")
 @Setter
 @Getter
@@ -16,21 +20,39 @@ public abstract class YamlConfig {
     private transient YamlConfigLoader configLoader = null;
     private transient Path file;
 
+    /** Создаёт конфиг без привязки к файлу и загрузчику. */
     public YamlConfig() {}
 
+    /**
+     * Сохраняет текущие значения, сохраняя существующие YAML-комментарии и неизвестные ключи.
+     * Если загрузчик не назначен, ничего не делает.
+     *
+     * @throws RuntimeException если сохранить файл не удалось
+     */
     public void save(){
         if (configLoader == null) return;
         configLoader.saveConfig(this);
     }
 
     /**
-     * Re-reads this config from disk while preserving the injected instance.
+     * Перечитывает файл и обновляет поля текущего экземпляра.
+     * Если загрузчик не назначен, ничего не делает.
+     * При ошибке чтения или разбора YAML текущие значения остаются прежними.
+     *
+     * @throws RuntimeException если загрузить файл не удалось
      */
     public void reload() {
         if (configLoader == null) return;
         configLoader.reloadConfig(this);
     }
 
+    /**
+     * Копирует значения полей из совместимого конфига, включая унаследованные поля.
+     * Ссылочные значения копируются без клонирования; static, transient и final-поля
+     * пропускаются. Недоступные для записи поля остаются без изменений.
+     *
+     * @param other источник значений; null и несовместимые типы игнорируются
+     */
     public void applyFrom(YamlConfig other) {
         if (other == null) return;
         Class<?> clazz = other.getClass();
@@ -56,5 +78,10 @@ public abstract class YamlConfig {
     }
 
 
+    /**
+     * Возвращает имя файла относительно каталога конфигов загрузчика.
+     *
+     * @return имя файла; если суффикс {@code .yml} отсутствует, загрузчик добавит его
+     */
     public abstract String getFileName();
 }

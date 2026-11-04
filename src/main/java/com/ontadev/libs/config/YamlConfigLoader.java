@@ -23,6 +23,10 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Загружает и кеширует YAML-конфиги, сохраняя комментарии при записи.
+ * Новые файлы копируются из ресурсов либо генерируются из значений класса.
+ */
 @Slf4j
 @SuppressWarnings("unused")
 public class YamlConfigLoader {
@@ -33,6 +37,13 @@ public class YamlConfigLoader {
     private final TypeToken<Map<String, Object>> mapToken = new TypeToken<>() {};
     private final Map<String, YamlConfig> cacheConfigs = new ConcurrentHashMap<>();
 
+    /**
+     * Создаёт загрузчик и при необходимости каталог для конфигов.
+     *
+     * @param dataDirectory каталог YAML-файлов
+     * @param adapters адаптеры Gson по типам; null означает отсутствие адаптеров
+     * @throws RuntimeException если создать каталог не удалось
+     */
     public YamlConfigLoader(Path dataDirectory, Map<Class<?>, Object> adapters) {
         this.dataDirectory = dataDirectory;
 
@@ -63,22 +74,40 @@ public class YamlConfigLoader {
     }
 
     /**
-     * ЛОГИКА СОХРАНЕНИЯ: Class -> Gson -> Snake -> Файл
+     * Сохраняет значения привязанного к файлу конфига.
+     * Существующие комментарии и неизвестные ключи сохраняются;
+     * аннотации {@link Comment} повторно не применяются.
+     *
+     * @param instance конфиг с назначенным путём файла
+     * @throws RuntimeException если записать файл не удалось
      */
     public void saveConfig(YamlConfig instance) {
+        saveConfig(instance, false);
+    }
+
+    private void saveConfig(YamlConfig instance, boolean generateComments) {
         Path file = instance.getFile();
 
         try {
             JsonElement jsonElement = gson.toJsonTree(instance);
 
             Map<String, Object> yamlMap = gson.fromJson(jsonElement, mapToken.getType());
-            preservingYaml.save(file, yamlMap);
+            preservingYaml.save(file, yamlMap, generateComments ? instance : null);
         } catch (IOException e) {
             log.error("Error while saving config {}", instance.getFileName(), e);
             throw new RuntimeException("Failed to save " + instance.getFileName(), e);
         }
     }
 
+    /**
+     * Перечитывает файл, обновляя существующий экземпляр конфига.
+     * Ошибки чтения и десериализации не изменяют его текущие значения.
+     *
+     * @param instance конфиг, который нужно обновить
+     * @param <T> тип конфига
+     * @throws IllegalStateException если конфиг не привязан к файлу
+     * @throws RuntimeException если чтение или десериализация завершились ошибкой
+     */
     public <T extends YamlConfig> void reloadConfig(T instance) {
         Path file = instance.getFile();
         if (file == null) {
@@ -101,7 +130,17 @@ public class YamlConfigLoader {
     }
 
     /**
-     * ЛОГИКА ЗАГРУЗКИ: Файл -> Snake -> Gson -> Class
+     * Загружает конфиг или возвращает ранее кешированный экземпляр по имени файла.
+     * Класс должен иметь конструктор без аргументов.
+     *
+     * <p>Если файла нет, ресурс с тем же именем копируется без изменений.
+     * Если ресурса нет, файл генерируется из значений класса с комментариями
+     * {@link Comment}. Для существующих файлов аннотация не применяется.</p>
+     *
+     * @param type класс конфига
+     * @param <T> тип конфига
+     * @return привязанный к файлу экземпляр
+     * @throws RuntimeException если создать или загрузить конфиг не удалось
      */
     public <T extends YamlConfig> T loadFromClass(Class<T> type) {
         try {
@@ -152,7 +191,7 @@ public class YamlConfigLoader {
             if (in != null) {
                 Files.copy(in, file);
             } else {
-                saveConfig(instance);
+                saveConfig(instance, true);
             }
         }
     }
@@ -178,6 +217,12 @@ public class YamlConfigLoader {
         return updated;
     }
 
+    /**
+     * Сохраняет все кешированные конфиги.
+     *
+     * @throws RuntimeException при первой ошибке сохранения;
+     *         оставшиеся конфиги могут остаться несохранёнными
+     */
     public void saveAll() {
         cacheConfigs.values().forEach(this::saveConfig);
     }

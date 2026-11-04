@@ -9,6 +9,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Выбирает публичный конструктор для создания IoC-компонента
+ * или внедряет зависимость в поле. Зависимость ищется по точному типу.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.CONSTRUCTOR, ElementType.FIELD})
 public @interface Inject {

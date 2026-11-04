@@ -11,9 +11,17 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Создаёт компонент команды и регистрирует его в Bukkit.
+ * Класс должен наследовать AbstractCommand.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Priority(priority = 99)
 public @interface RegisterCommand {
+    /**
+     * Приоритет среди компонентов с одинаковым приоритетом аннотации.
+     * Большие значения создаются раньше при соблюдении порядка зависимостей.
+     */
     int priority() default 0;
 }

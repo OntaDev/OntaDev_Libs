@@ -11,9 +11,17 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Создаёт компонент меню и регистрирует его в MenuManager.
+ * Класс должен наследовать AbstractMenu.
+ */
 @Priority(priority = 98)
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Menu {
+    /**
+     * Приоритет среди компонентов с одинаковым приоритетом аннотации.
+     * Большие значения создаются раньше при соблюдении порядка зависимостей.
+     */
     int priority() default 0;
 }

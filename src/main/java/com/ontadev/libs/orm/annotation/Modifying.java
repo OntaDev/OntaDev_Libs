@@ -9,8 +9,16 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Задаёт SQL изменения данных для метода ORM-репозитория.
+ * Метод с результатом void выполняет запрос без чтения результата;
+ * для других типов читается первый сгенерированный ключ.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface Modifying {
+    /**
+     * SQL-запрос изменения данных.
+     */
     String value() default "";
 }
