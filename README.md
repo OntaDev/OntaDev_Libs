@@ -415,3 +415,36 @@ private void initialize() {
 Обрабатываются методы, объявленные в классе экземпляра, включая `private`.
 Каждый метод вызывается один раз для экземпляра. Порядок вызовов не задан.
 Ошибка метода прерывает инициализацию контейнера.
+
+### ProtocolLib в IoC
+
+`OntaDev_Libs.registerAddons()` регистрирует API LuckPerms и, если ProtocolLib включён
+и API готово, `ProtocolManager` в общем `AddonProvider`.
+Его можно получить через конструктор с `@Inject` или поле с `@Inject`.
+Если ProtocolLib отсутствует, менеджер не регистрируется.
+Компонентам, которым нужен ProtocolLib, требуется установленный плагин.
+ProtocolLib подключён со scope `provided` и не включается в JAR библиотеки.
+
+### Регистрация аддонов
+
+Template вызывает `registerAddons()` в `onEnable` до инициализации компонентов:
+
+```java
+@Override
+protected void registerAddons(AddonProvider addons) {
+    addons.registerAddon(MyApi.class, "MyAddon", true);
+    if (getServer().getPluginManager().isPluginEnabled("OptionalAddon")) {
+        addons.registerAddon(OptionalAddon::getApi, OptionalApi.class, false);
+    }
+}
+```
+
+Импорт: `com.ontadev.libs.service.AddonProvider`.
+Реестр общий для плагинов. Найденное API кешируется по типу; повторный вызов
+не обращается к ServicesManager или supplier. Отсутствующее API не кешируется.
+Параметр `required` включает исключение при отсутствии API.
+Проверка наличия необязательного плагина выполняется до обращения к его классам.
+
+Найденные API регистрируются в каждом PluginIoC перед инициализацией компонентов.
+Уже инициализированные контейнеры при добавлении новых API не обновляются.
+Локальные объекты плагина регистрируются через его PluginIoC, а не общий реестр.

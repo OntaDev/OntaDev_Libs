@@ -3,6 +3,10 @@
 // Лицензия: MIT
 package com.ontadev.libs.plugin;
 
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.ProtocolManager;
+import com.ontadev.libs.service.AddonProvider;
+import net.luckperms.api.LuckPerms;
 import com.ontadev.libs.config.SettingsConfig;
 import com.ontadev.libs.config.YamlConfigLoader;
 import com.ontadev.libs.ioc.IoCContainer;
@@ -24,6 +28,9 @@ public final class OntaDev_Libs extends OntaDev_Template {
     @Getter
     public static OntaDev_Libs instance;
 
+    @Getter
+    private static AddonProvider addonProvider;
+
     public static MenuManager defaultMenuManager;
     public static PlayerResolver playerResolver;
 
@@ -42,6 +49,8 @@ public final class OntaDev_Libs extends OntaDev_Template {
         Message.load(this);
         MessageDispatcher.load(this);
 
+        addonProvider = new AddonProvider(getServer().getServicesManager());
+
         super.onLoad();
     }
 
@@ -53,6 +62,14 @@ public final class OntaDev_Libs extends OntaDev_Template {
         registerMenuManager();
 
         super.onEnable();
+    }
+
+    @Override
+    protected void registerAddons(AddonProvider addons) {
+        addons.registerAddon(LuckPerms.class, "LuckPerms", true);
+        if (getServer().getPluginManager().isPluginEnabled("ProtocolLib")) {
+            addons.registerAddon(ProtocolLibrary::getProtocolManager, ProtocolManager.class, false);
+        }
     }
 
     private void createDefaultMenuManager() {

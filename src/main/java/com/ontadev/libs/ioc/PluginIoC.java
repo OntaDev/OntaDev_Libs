@@ -5,6 +5,8 @@
 package com.ontadev.libs.ioc;
 
 import com.ontadev.libs.config.YamlConfigLoader;
+import com.ontadev.libs.plugin.OntaDev_Libs;
+import com.ontadev.libs.service.AddonProvider;
 import com.ontadev.libs.ioc.handlers.impl.*;
 import com.ontadev.libs.message.Message;
 import com.ontadev.libs.serialization.GsonAdapter;
@@ -90,6 +92,9 @@ public class PluginIoC {
 
     public void initializeContainer() {
         if (tempClasses == null) return;
+
+        AddonProvider addons = OntaDev_Libs.getAddonProvider();
+        if (addons != null && container.getIfExists(AddonProvider.class) == null) addons.registerIn(this);
 
         container.initialize(tempClasses);
 

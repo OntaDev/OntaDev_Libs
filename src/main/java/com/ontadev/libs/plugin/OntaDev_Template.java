@@ -5,6 +5,7 @@
 package com.ontadev.libs.plugin;
 
 import com.ontadev.libs.ioc.PluginIoC;
+import com.ontadev.libs.service.AddonProvider;
 import com.ontadev.libs.menu.MenuManagerImpl;
 import com.ontadev.libs.menu.manager.MenuManager;
 import com.ontadev.libs.orm.database.DatabaseManager;
@@ -40,6 +41,12 @@ public abstract class OntaDev_Template extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        AddonProvider addons = OntaDev_Libs.getAddonProvider();
+        if (addons != null) {
+            registerAddons(addons);
+            addons.registerIn(pluginIoC);
+        }
+
         registerSharedOrm();
 
         preInitializeContainer(pluginIoC);
@@ -72,6 +79,14 @@ public abstract class OntaDev_Template extends JavaPlugin {
 
         pluginIoC.getContainer().registerInterfaceHandler(OntaDev_Libs.ormRepositoryHandler);
     }
+
+    /**
+     * Регистрирует API аддонов в общем реестре до инициализации компонентов.
+     * Вызывается в onEnable. Найденные API доступны текущему и последующим контейнерам.
+     *
+     * @param addons общий реестр API
+     */
+    protected void registerAddons(AddonProvider addons) {}
 
     protected void preInitializeContainer(PluginIoC pluginIoC){
         registerMenuManager(pluginIoC);
