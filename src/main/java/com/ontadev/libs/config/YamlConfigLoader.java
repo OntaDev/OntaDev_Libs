@@ -173,7 +173,7 @@ public class YamlConfigLoader {
                 Map<?, ?> rawData = rawYaml instanceof Map<?, ?> ? (Map<?, ?>) rawYaml : null;
                 if (applyDefaultsFromClass(loadedInstance, rawData)) {
                     saveConfig(loadedInstance);
-                    log.info("Config {} updated with new default values.", fileName);
+                    log.debug("Config {} updated with new default values.", fileName);
                 }
 
                 cacheConfigs.put(fileName, loadedInstance);

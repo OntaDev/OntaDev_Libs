@@ -41,6 +41,6 @@ public class CommandHandler implements ClassAnnotationHandler<RegisterCommand> {
         AbstractCommand command = (AbstractCommand) instance;
 
         command.register(plugin);
-        log.info("Command {} registered", command);
+        log.debug("Command {} registered", command);
     }
 }

@@ -53,6 +53,6 @@ public class AutoListenerHandler implements ClassAnnotationHandler<AutoListener>
     @Override
     public void postCreate(IoCContainer container, Object instance, AutoListener annotation) {
         Bukkit.getPluginManager().registerEvents((Listener) instance, plugin);
-        log.info("Registered listener: {}", instance.getClass().getName());
+        log.debug("Registered listener: {}", instance.getClass().getName());
     }
 }

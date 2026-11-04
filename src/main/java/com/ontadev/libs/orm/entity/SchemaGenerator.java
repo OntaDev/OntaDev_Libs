@@ -36,7 +36,7 @@ public final class SchemaGenerator {
         try (Connection connection = databaseManager.getConnection();
              Statement statement = connection.createStatement()) {
             statement.execute(ddl);
-            log.info("Схема применена для {} -> {} ({})",
+            log.debug("Схема применена для {} -> {} ({})",
                     entityClass.getSimpleName(), metadata.tableName(), databaseManager.getDialect());
         } catch (SQLException exception) {
             alreadyGenerated.remove(entityClass); // не запоминаем неудачную попытку

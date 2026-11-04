@@ -141,7 +141,7 @@ public class PluginIoC {
                 continue;
             }
 
-            log.info("Registering adapter for {}", clazz.getName());
+            log.debug("Registering adapter for {}", clazz.getName());
 
             Class<?> type = gsonAdapter.value();
             Object adapter = container.create(clazz);
