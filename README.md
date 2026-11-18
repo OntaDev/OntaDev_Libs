@@ -1,3 +1,4 @@
+<!--suppress ALL -->
 # OntaDev_Libs
 
 Библиотека для Paper/Bukkit-плагинов: DI-контейнер с автосканированием, ORM на JDBI с поддержкой 4 диалектов, система меню с анимацией через задачи, сообщения на MiniMessage, YAML-конфиги.
@@ -448,3 +449,43 @@ protected void registerAddons(AddonProvider addons) {
 Найденные API регистрируются в каждом PluginIoC перед инициализацией компонентов.
 Уже инициализированные контейнеры при добавлении новых API не обновляются.
 Локальные объекты плагина регистрируются через его PluginIoC, а не общий реестр.
+
+### Метрики bStats
+
+Для плагина на `OntaDev_Template` задайте его ID на bStats и добавьте графики:
+
+```java
+import com.ontadev.libs.metrics.PluginMetrics;
+import com.ontadev.libs.ioc.PluginIoC;
+
+@Override
+protected int getBStatsId() {
+    return 12345; // ID вашего плагина на bStats
+}
+
+@Override
+protected void registerMetrics(PluginMetrics metrics, PluginIoC pluginIoC) {
+    metrics.addSimplePie("storage", () -> "sqlite")
+           .addSingleLineChart("active_quests", () -> questService.getActiveCount());
+}
+```
+
+`registerMetrics()` вызывается после инициализации IoC, перед его onEnable-обработчиками
+и `onPluginEnable()`.
+ID и графики нужно создать на bstats.org; ID графика на сайте должен совпадать с кодом.
+Поддерживаются SimplePie, AdvancedPie, DrilldownPie, SingleLineChart, MultiLineChart,
+SimpleBarChart и AdvancedBarChart через соответствующие методы `add...`.
+
+`PluginMetrics` создаётся и регистрируется в IoC до инициализации компонентов.
+При положительном ID метрики доступны для внедрения в конструкторы, поля и `@PostConstruct`.
+Графики можно добавлять через `registerMetrics()` или полученный из IoC экземпляр.
+У каждого плагина собственный экземпляр. По умолчанию ID равен 0: bStats не создаётся,
+`registerMetrics()` не вызывается, в IoC метрики не регистрируются.
+Неположительный ID в template отключает метрики.
+Для OntaDev_Libs используется ID `35438`.
+
+Данные графиков запрашиваются при сборе статистики в основном потоке Bukkit.
+Глобальная настройка `plugins/bStats/config.yml` сохраняет возможность отключить отправку.
+При отключении плагина планировщик метрик останавливается, в том числе при ошибке shutdown-хука.
+bStats включается в JAR с relocation `org.bstats` в `com.ontadev.libs.shaded.bstats`.
+Плагинам, использующим `PluginMetrics`, отдельно подключать bStats не требуется.

@@ -5,6 +5,7 @@ package com.ontadev.libs.plugin;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
+import com.ontadev.libs.metrics.PluginMetrics;
 import com.ontadev.libs.service.AddonProvider;
 import net.luckperms.api.LuckPerms;
 import com.ontadev.libs.config.SettingsConfig;
@@ -70,6 +71,19 @@ public final class OntaDev_Libs extends OntaDev_Template {
         if (getServer().getPluginManager().isPluginEnabled("ProtocolLib")) {
             addons.registerAddon(ProtocolLibrary::getProtocolManager, ProtocolManager.class, false);
         }
+    }
+
+    @Override
+    protected int getBStatsId() {
+        return 35438;
+    }
+
+    @Override
+    protected void registerMetrics(PluginMetrics metrics, PluginIoC pluginIoC) {
+        metrics.addSimplePie(
+                "database_type",
+                () -> databaseManager.getDialect().name()
+        );
     }
 
     private void createDefaultMenuManager() {
