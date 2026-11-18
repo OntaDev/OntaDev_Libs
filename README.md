@@ -60,6 +60,7 @@ public final class MyPlugin extends OntaDev_Template {
 | `@Service` | обычный сервис |
 | `@Component` | компонент общего назначения |
 | `@Repository` | компонент уровня доступа к данным (не путать с ORM-репозиториями ниже) |
+| `@Lazy` | откладывает создание `@Service` или `@Component` до первого запроса |
 | `@Config` | класс настроек, автоматически загружается через `YamlConfigLoader` перед созданием |
 | `@RegisterCommand` | наследник `AbstractCommand`, автоматически регистрируется в Bukkit |
 | `@Menu` | наследник `AbstractMenu`, автоматически регистрируется в `MenuManager` |
@@ -489,3 +490,47 @@ SimpleBarChart и AdvancedBarChart через соответствующие м�
 При отключении плагина планировщик метрик останавливается, в том числе при ошибке shutdown-хука.
 bStats включается в JAR с relocation `org.bstats` в `com.ontadev.libs.shaded.bstats`.
 Плагинам, использующим `PluginMetrics`, отдельно подключать bStats не требуется.
+
+### Ленивые сервисы и компоненты
+
+```java
+import com.ontadev.libs.ioc.annotation.common.Lazy;
+import com.ontadev.libs.ioc.annotation.stereotype.Service;
+
+@Service
+@Lazy
+public class ReportService {
+    // @Inject, @PostConstruct и @Shutdown обрабатываются при первом запросе
+}
+```
+
+`@Lazy` откладывает создание `@Service` или `@Component`, сохраняя один экземпляр
+на контейнер. Поддерживается также на интерфейсе с этими аннотациями при одной реализации.
+Аннотация сама по себе не регистрирует компонент.
+
+Для отложенной зависимости используйте существующий `Provider<T>`:
+
+```java
+@Inject
+private Provider<ReportService> reports;
+
+public void generateReport() {
+    ReportService service = reports.get();
+}
+```
+
+Импорт Provider: `com.ontadev.libs.ioc.Provider`.
+Прямое внедрение `ReportService` создаёт его при инициализации получателя.
+`Provider<ReportService>` создаёт бин при первом `get()`. Вызовы `get()` и `create()`
+возвращают тот же экземпляр.
+
+После запуска контейнера первый запрос выполняет конструктор, внедрение полей,
+`@PostConstruct` и регистрацию `@Shutdown` до возврата бина.
+Если бин понадобился во время запуска, его поля и методы обрабатываются в фазах
+инициализации контейнера. Методы не обрабатываются повторно через другой тип регистрации.
+Для созданного бина регистрируется shutdown-хук; для неиспользованного бина он отсутствует.
+При ошибке создания или `@PostConstruct` новый бин не остаётся в кеше, запрос можно повторить.
+
+Команды, слушатели, меню, конфиги и репозитории продолжают создаваться на старте,
+даже если на классе дополнительно стоит `@Lazy`.
+Первый запрос выполняется в вызывающем потоке; для Bukkit используйте основной поток сервера.

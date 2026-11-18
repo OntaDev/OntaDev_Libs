@@ -211,8 +211,14 @@ public class PluginIoC {
     }
 
     /**
-     * Зарегистрировать вручную конкретный компонент
+     * Регистрирует класс с нулевыми приоритетами и типом регистрации RegisterCommand.
+     *
+     * @param clazz класс компонента
+     * @deprecated Не учитывает приоритет и тип аннотации компонента.
+     * Используйте {@link IoCContainer#registerComponent(Class, int, Class)}
+     * через {@link #getContainer()} с явными параметрами.
      */
+    @SuppressWarnings("DeprecatedIsStillUsed")
     @Deprecated
     public void registerComponent(Class<?> clazz) {
         container.registerComponent(clazz);

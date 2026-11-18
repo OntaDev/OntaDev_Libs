@@ -1,6 +1,14 @@
 package com.ontadev.libs.ioc;
 
+import com.ontadev.libs.ioc.annotation.AutoListener;
+import com.ontadev.libs.ioc.annotation.menu.Menu;
+import com.ontadev.libs.ioc.annotation.stereotype.Config;
+import com.ontadev.libs.ioc.annotation.stereotype.Repository;
 import com.ontadev.libs.ioc.annotation.common.Priority;
+import com.ontadev.libs.ioc.annotation.common.Lazy;
+import com.ontadev.libs.ioc.annotation.lifecycle.PostConstruct;
+import com.ontadev.libs.ioc.annotation.stereotype.Component;
+import com.ontadev.libs.ioc.annotation.stereotype.Service;
 import com.ontadev.libs.ioc.annotation.stereotype.RegisterCommand;
 import com.ontadev.libs.ioc.handlers.ClassAnnotationHandler;
 import com.ontadev.libs.ioc.handlers.FieldAnnotationHandler;
@@ -38,6 +46,14 @@ public class IoCContainer {
     private final Map<Class<?>, ComponentPriority> components = new HashMap<>();
 
     private final Set<Class<?>> blockedClasses = new HashSet<>();
+    private final Set<Class<?>> constructing = new HashSet<>();
+    private final Set<Object> injecting = Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<Object> injected = Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<Object> processingMethods = Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<Object> processedMethods = Collections.newSetFromMap(new IdentityHashMap<>());
+    private LifecyclePhase lifecyclePhase = LifecyclePhase.CONSTRUCTING;
+
+    private enum LifecyclePhase { CONSTRUCTING, INJECTING, METHODS, READY }
 
     /*
      * Инициализация
@@ -46,8 +62,11 @@ public class IoCContainer {
     public void initialize(Set<Class<?>> classes) {
         scanClassAnnotations(classes);
         instantiateComponents();
+        lifecyclePhase = LifecyclePhase.INJECTING;
         injectFields();
+        lifecyclePhase = LifecyclePhase.METHODS;
         processMethods();
+        lifecyclePhase = LifecyclePhase.READY;
     }
 
     /*
@@ -205,8 +224,21 @@ public class IoCContainer {
 
     private void instantiateComponents() {
         for (Class<?> component : resolveCreationOrder()) {
-            create(component);
+            if (!isLazy(component)) create(component);
         }
+    }
+
+    private boolean isLazy(Class<?> type) {
+        ComponentPriority registration = components.get(type);
+        boolean eligible = type.isAnnotationPresent(Component.class) || type.isAnnotationPresent(Service.class)
+                || registration != null && (registration.annotation() == Component.class
+                || registration.annotation() == Service.class);
+        if (!eligible) return false;
+        if (type.isAnnotationPresent(AutoListener.class) || type.isAnnotationPresent(Menu.class)
+                || type.isAnnotationPresent(Config.class) || type.isAnnotationPresent(RegisterCommand.class)
+                || type.isAnnotationPresent(Repository.class)) return false;
+        return type.isAnnotationPresent(Lazy.class) || collectAllInterfaces(type).stream()
+                .anyMatch(iface -> iface.isAnnotationPresent(Lazy.class));
     }
 
     private List<Class<?>> resolveCreationOrder() {
@@ -218,6 +250,7 @@ public class IoCContainer {
         Map<Class<?>, List<Class<?>>> graph = new HashMap<>();
 
         for (Class<?> component : components.keySet()) {
+            if (isLazy(component)) continue;
             List<Class<?>> dependencies = new ArrayList<>();
 
             Constructor<?> constructor;
@@ -231,7 +264,7 @@ public class IoCContainer {
 
             for (Class<?> paramType : constructor.getParameterTypes()) {
                 Class<?> resolved = implementations.getOrDefault(paramType, paramType);
-                if (!resolved.equals(component) && components.containsKey(resolved)) {
+                if (!resolved.equals(component) && components.containsKey(resolved) && !isLazy(resolved)) {
                     dependencies.add(resolved);
                 }
             }
@@ -301,31 +334,59 @@ public class IoCContainer {
      */
 
     private void injectFields() {
-        for (Object instance : instances.values()) {
-            Class<?> clazz = instance.getClass();
-            for (Field field : clazz.getDeclaredFields()) {
+        while (true) {
+            List<Object> pending = instances.values().stream().filter(instance -> !injected.contains(instance))
+                    .collect(Collectors.toList());
+            if (pending.isEmpty()) return;
+            pending.forEach(this::injectFields);
+        }
+    }
+
+    private void injectFields(Object instance) {
+        if (injected.contains(instance) || !injecting.add(instance)) return;
+        try {
+            for (Field field : instance.getClass().getDeclaredFields()) {
                 for (Annotation annotation : field.getAnnotations()) {
                     findHandler(fieldHandlers, annotation)
                             .map(h -> (FieldAnnotationHandler<Annotation>) h)
                             .ifPresent(h -> h.handle(this, instance, field, annotation));
                 }
             }
+            injected.add(instance);
+        } finally {
+            injecting.remove(instance);
         }
     }
 
-    /*
-     * Фаза обработки методов
-     */
-
     private void processMethods() {
-        for (Object instance : instances.values()) {
-            for (Method method : instance.getClass().getDeclaredMethods()) {
-                for (Annotation annotation : method.getAnnotations()) {
-                    findHandler(methodHandlers, annotation)
-                            .map(h -> (MethodAnnotationHandler<Annotation>) h)
-                            .ifPresent(h -> h.handle(this, instance, method, annotation));
+        while (true) {
+            List<Object> pending = instances.values().stream().filter(instance -> !processedMethods.contains(instance))
+                    .collect(Collectors.toList());
+            if (pending.isEmpty()) return;
+            pending.forEach(this::initializeInstance);
+        }
+    }
+
+    private void initializeInstance(Object instance) {
+        if (lifecyclePhase == LifecyclePhase.CONSTRUCTING) return;
+        injectFields(instance);
+        if (lifecyclePhase == LifecyclePhase.INJECTING || injecting.contains(instance)
+                || processedMethods.contains(instance) || !processingMethods.add(instance)) return;
+        try {
+            // PostConstruct должен завершиться до регистрации Shutdown.
+            for (boolean postConstruct : new boolean[]{true, false}) {
+                for (Method method : instance.getClass().getDeclaredMethods()) {
+                    for (Annotation annotation : method.getAnnotations()) {
+                        if ((annotation.annotationType() == PostConstruct.class) != postConstruct) continue;
+                        findHandler(methodHandlers, annotation)
+                                .map(h -> (MethodAnnotationHandler<Annotation>) h)
+                                .ifPresent(h -> h.handle(this, instance, method, annotation));
+                    }
                 }
             }
+            processedMethods.add(instance);
+        } finally {
+            processingMethods.remove(instance);
         }
     }
 
@@ -352,6 +413,14 @@ public class IoCContainer {
         block(handler);
     }
 
+    /**
+     * Регистрирует класс с нулевыми приоритетами и типом регистрации RegisterCommand.
+     *
+     * @param clazz класс компонента
+     * @deprecated Не учитывает приоритет и тип аннотации компонента.
+     * Используйте {@link #registerComponent(Class, int, Class)} с явными параметрами.
+     */
+    @SuppressWarnings("DeprecatedIsStillUsed")
     @Deprecated
     public void registerComponent(Class<?> clazz) {
         components.put(clazz, ComponentPriority.defaultPriority());
@@ -383,49 +452,51 @@ public class IoCContainer {
     public <T> T create(Class<T> clazz) {
         log.debug("Creating instance of {}", clazz.getName());
         Object existing = instances.get(clazz);
-
         if (existing != null) {
+            initializeInstance(existing);
             return (T) existing;
         }
-
         if (implementations.containsKey(clazz)) {
-            Class<? extends T> impl = (Class<? extends T>) implementations.get(clazz);
-            log.debug("Implementation already exists for {} creating {}", clazz.getName(), impl.getName());
-            return create(impl);
+            Class<?> implementation = implementations.get(clazz);
+            log.debug("Implementation already exists for {} creating {}", clazz.getName(), implementation.getName());
+            return (T) create(implementation);
         }
-
         if (clazz.isAnnotation() || clazz.isInterface() || Modifier.isAbstract(clazz.getModifiers())) {
             log.error("Class is {} is interface/annotation/abstract", clazz.getName());
             return null;
         }
-
-        T instance = preConstruct(clazz);
-
-        if (instance != null) {
-            instances.put(clazz, instance);
-            postConstruct(clazz, instance);
-            return instance;
+        if (!constructing.add(clazz)) {
+            throw new IllegalStateException("Циклическая зависимость при создании " + clazz.getName());
         }
-
+        T instance = null;
         try {
-            var constructor = ConstructorResolver.resolve(clazz);
-
-            Type[] genericParams = constructor.getGenericParameterTypes();
-
-            Object[] params = Arrays.stream(genericParams)
-                    .map(this::resolveDependency)
-                    .toArray();
-
-            instance = (T) constructor.newInstance(params);
+            instance = preConstruct(clazz);
+            if (instance == null) {
+                Constructor<?> constructor = ConstructorResolver.resolve(clazz);
+                Object[] params = Arrays.stream(constructor.getGenericParameterTypes())
+                        .map(this::resolveDependency).toArray();
+                instance = (T) constructor.newInstance(params);
+            }
             instances.put(clazz, instance);
-
             postConstruct(clazz, instance);
-
+            initializeInstance(instance);
             return instance;
-
+        } catch (RuntimeException | Error exception) {
+            discardInstance(clazz, instance);
+            throw exception;
         } catch (Exception exception) {
+            discardInstance(clazz, instance);
             throw new RuntimeException("Failed create " + clazz.getName(), exception);
+        } finally {
+            constructing.remove(clazz);
         }
+    }
+
+    private void discardInstance(Class<?> type, Object instance) {
+        if (instance == null) return;
+        instances.remove(type, instance);
+        injected.remove(instance);
+        processedMethods.remove(instance);
     }
 
     /**
@@ -478,20 +549,7 @@ public class IoCContainer {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public <T> T get(Class<T> type) {
-        Object instance = instances.get(type);
-
-        if (instance != null) {
-            return (T) instance;
-        }
-
-        Class<?> impl = implementations.get(type);
-
-        if (impl != null) {
-            return (T) create(impl);
-        }
-
         return create(type);
     }
 
